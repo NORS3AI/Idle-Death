@@ -22,10 +22,10 @@ tapping never accidentally zooms the page or highlights text.
 
 ## Run locally
 
-It's a single self-contained `index.html` — just open it in a browser, or
-serve the folder:
+The game is a single self-contained `docs/index.html` (GitHub Pages serves
+from the `/docs` folder on `main`). Just open it in a browser, or serve it:
 
 ```bash
-python3 -m http.server 8000
+python3 -m http.server 8000 --directory docs
 # then visit http://localhost:8000
 ```
