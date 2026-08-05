@@ -7,9 +7,14 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#0b0b12" />
+  <!-- Force dark mode for the page and all native UI (scrollbars, form fields, dialogs) -->
+  <meta name="color-scheme" content="dark" />
+  <meta name="supported-color-schemes" content="dark" />
   <title>Idle Death — An idle game like LARP TYCOON richman idle</title>
   <style>
     :root {
+      /* Force everything (native controls, scrollbars, prompts) to dark */
+      color-scheme: dark;
       --bg: #0b0b12;
       --panel: #1b1b28;
       --panel2: #23233a;
@@ -35,6 +40,7 @@
 
     html, body {
       margin: 0; padding: 0; height: 100%;
+      background: #0b0b12;
       touch-action: manipulation;
       overscroll-behavior: none;
     }
