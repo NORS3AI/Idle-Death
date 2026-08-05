@@ -20,6 +20,25 @@ device.
 It plays great on iOS: double-tap zoom and text selection are disabled so
 tapping never accidentally zooms the page or highlights text.
 
+## Features
+
+- **Tap to reap** souls, with a global multiplier that scales everything.
+- **9 businesses**, each with **10 upgrades** that double its output.
+- **Vehicles** — bicycles, motorcycles, cars, sports cars, speed boats,
+  mega yachts, helicopters, private jets and a death rocket — each a
+  permanent income multiplier.
+- **Real estate** — apartments through to a whole necropolis city.
+- **Museum & Stock Exchange** — priceless artifacts (vase, masterpiece,
+  cursed crown, dino fossil, Hope Diamond, soul meteorite) that trade like
+  stocks with fluctuating prices; holding shares also boosts income.
+- **Spin to Win** — a prize wheel with a free spin every 30 minutes (or pay
+  souls), giving cash, temporary income boosts, free vehicles, reaper coins
+  and a jackpot.
+- **Prestige** — reset for permanent prestige points (+3% income each).
+- **Achievements** — 24 milestones, each granting a permanent reward.
+- **Idle & offline progress** — your empire keeps earning while you're away.
+- Buy in **×1 / ×10 / ×100 / MAX** amounts, with export/import save codes.
+
 ## Run locally
 
 The game is a single self-contained `docs/index.html` (GitHub Pages serves

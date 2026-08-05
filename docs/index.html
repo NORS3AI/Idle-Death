@@ -11,12 +11,13 @@
   <style>
     :root {
       --bg: #0b0b12;
-      --bg2: #14141f;
       --panel: #1b1b28;
       --panel2: #23233a;
       --accent: #8b5cf6;
       --accent2: #22d3ee;
+      --gold: #fbbf24;
       --good: #34d399;
+      --bad: #f87171;
       --text: #e8e8f0;
       --muted: #9a9ab0;
       --border: #2c2c42;
@@ -24,20 +25,16 @@
 
     * {
       box-sizing: border-box;
-      /* Disable text selection everywhere */
       -webkit-user-select: none;
       -moz-user-select: none;
       -ms-user-select: none;
       user-select: none;
       -webkit-tap-highlight-color: transparent;
-      -webkit-touch-callout: none; /* no iOS long-press callout */
+      -webkit-touch-callout: none;
     }
 
     html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      /* touch-action: manipulation removes the 300ms + double-tap-to-zoom gesture on iOS */
+      margin: 0; padding: 0; height: 100%;
       touch-action: manipulation;
       overscroll-behavior: none;
     }
@@ -50,444 +47,1126 @@
       flex-direction: column;
       align-items: center;
       min-height: 100%;
-      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
     }
 
-    header {
-      text-align: center;
-      padding: 20px 16px 8px;
-      width: 100%;
-      max-width: 560px;
-    }
+    .wrap { width: 100%; max-width: 620px; padding: 0 12px 120px; }
 
+    /* ---------- Header ---------- */
+    header { text-align: center; padding: 16px 4px 6px; }
     h1 {
-      margin: 0;
-      font-size: 28px;
-      letter-spacing: 1px;
+      margin: 0; font-size: 26px; letter-spacing: 1px;
       background: linear-gradient(90deg, var(--accent), var(--accent2));
-      -webkit-background-clip: text;
-      background-clip: text;
+      -webkit-background-clip: text; background-clip: text;
       -webkit-text-fill-color: transparent;
     }
+    .tagline { margin: 3px 0 0; font-size: 12px; color: var(--muted); }
 
-    .tagline {
-      margin: 4px 0 0;
-      font-size: 13px;
-      color: var(--muted);
+    .hud {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 14px; padding: 12px; margin: 12px 0;
     }
+    .hud .cell { text-align: center; }
+    .hud .k { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+    .hud .v { font-size: 18px; font-weight: 800; margin-top: 2px; }
+    .hud .v.souls { color: var(--gold); }
+    .hud .v.rate { color: var(--good); }
+    .hud .v.mult { color: var(--accent2); }
 
-    main {
-      width: 100%;
-      max-width: 560px;
-      padding: 0 16px 40px;
+    /* ---------- Tabs ---------- */
+    .tabbar {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+      display: flex; justify-content: center;
+      background: rgba(11,11,18,.92);
+      backdrop-filter: blur(8px);
+      border-top: 1px solid var(--border);
+      padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
     }
-
-    .stats {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 16px;
-      margin: 14px 0;
-      text-align: center;
-    }
-
-    .souls {
-      font-size: 40px;
-      font-weight: 800;
-      line-height: 1.1;
-    }
-    .souls small { font-size: 15px; color: var(--muted); font-weight: 600; }
-
-    .rate {
-      margin-top: 6px;
-      font-size: 14px;
-      color: var(--good);
-    }
-
-    .clicker-wrap {
-      display: flex;
-      justify-content: center;
-      margin: 18px 0 8px;
-    }
-
-    .clicker {
-      -webkit-appearance: none;
-      appearance: none;
-      border: none;
-      width: 180px;
-      height: 180px;
-      border-radius: 50%;
-      font-size: 84px;
-      cursor: pointer;
-      color: #fff;
-      background: radial-gradient(circle at 50% 35%, #2b2b45, #14141f 70%);
-      box-shadow: 0 0 0 4px var(--border), 0 12px 30px rgba(139, 92, 246, .35);
-      transition: transform .06s ease, box-shadow .2s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    .tabbar .inner { display: flex; gap: 2px; width: 100%; max-width: 620px; overflow-x: auto; }
+    .tabbar button {
+      -webkit-appearance: none; appearance: none;
+      position: relative; flex: 1 0 auto; min-width: 58px;
+      background: transparent; border: none; color: var(--muted);
+      font-size: 10px; padding: 6px 4px; border-radius: 10px; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
       touch-action: manipulation;
     }
-    .clicker:active {
-      transform: scale(0.94);
-      box-shadow: 0 0 0 4px var(--accent), 0 6px 18px rgba(139, 92, 246, .5);
+    .tabbar button .ic { font-size: 20px; }
+    .tabbar button.active { color: var(--text); background: var(--panel2); }
+    .tabbar button .badge {
+      position: absolute; top: 2px; right: 8px;
+      background: var(--bad); color: #fff; font-size: 9px; font-weight: 800;
+      border-radius: 10px; padding: 0 5px; line-height: 15px;
     }
 
-    .hint {
-      text-align: center;
-      color: var(--muted);
-      font-size: 13px;
-      margin: 4px 0 18px;
-    }
-
+    /* ---------- Generic cards / buttons ---------- */
     .section-title {
-      font-size: 14px;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      color: var(--muted);
-      margin: 22px 4px 10px;
+      font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px;
+      color: var(--muted); margin: 18px 4px 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px;
     }
+    .list { display: flex; flex-direction: column; gap: 8px; }
 
-    .shop { display: flex; flex-direction: column; gap: 10px; }
+    .card {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 14px; padding: 12px;
+    }
 
     .item {
-      -webkit-appearance: none;
-      appearance: none;
-      text-align: left;
-      width: 100%;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 12px 14px;
-      color: var(--text);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      transition: background .15s ease, transform .06s ease, border-color .15s ease;
+      -webkit-appearance: none; appearance: none; text-align: left; width: 100%;
+      background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+      padding: 11px 12px; color: var(--text); cursor: pointer;
+      display: flex; align-items: center; gap: 11px;
+      transition: background .12s, border-color .12s, transform .05s;
       touch-action: manipulation;
     }
     .item:active { transform: scale(0.99); }
-    .item:not(:disabled):hover { background: var(--panel2); border-color: var(--accent); }
-    .item:disabled { opacity: .5; cursor: not-allowed; }
-
-    .item .icon { font-size: 30px; width: 40px; text-align: center; }
+    .item:not([disabled]):hover { border-color: var(--accent); }
+    .item[disabled] { opacity: .45; cursor: not-allowed; }
+    .item .icon { font-size: 28px; width: 40px; text-align: center; flex: 0 0 auto; }
     .item .body { flex: 1; min-width: 0; }
     .item .name { font-weight: 700; font-size: 15px; }
-    .item .desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
-    .item .owned { font-size: 12px; color: var(--accent2); margin-top: 2px; }
-    .item .cost {
-      font-weight: 700;
-      font-size: 14px;
-      color: var(--good);
-      white-space: nowrap;
+    .item .desc { font-size: 11px; color: var(--muted); margin-top: 1px; }
+    .item .meta { font-size: 11px; color: var(--accent2); margin-top: 2px; }
+    .item .right { text-align: right; flex: 0 0 auto; }
+    .item .cost { font-weight: 800; font-size: 14px; color: var(--good); white-space: nowrap; }
+    .item.cant .cost { color: var(--bad); }
+    .item .own { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    .btn {
+      -webkit-appearance: none; appearance: none; cursor: pointer;
+      background: var(--accent); color: #fff; border: none; border-radius: 12px;
+      font-weight: 800; font-size: 15px; padding: 12px 16px; touch-action: manipulation;
     }
-    .item.cant .cost { color: #f87171; }
+    .btn:active { transform: scale(0.98); }
+    .btn[disabled] { opacity: .4; cursor: not-allowed; }
+    .btn.ghost { background: var(--panel); color: var(--text); border: 1px solid var(--border); font-weight: 600; font-size: 13px; padding: 9px 14px; }
+    .btn.gold { background: var(--gold); color: #201400; }
+    .btn.danger { background: var(--panel); color: var(--bad); border: 1px solid var(--border); }
+
+    .amtToggle { display: flex; gap: 4px; }
+    .amtToggle button {
+      -webkit-appearance: none; appearance: none; cursor: pointer;
+      background: var(--panel); color: var(--muted); border: 1px solid var(--border);
+      border-radius: 9px; font-size: 12px; font-weight: 700; padding: 4px 9px; touch-action: manipulation;
+    }
+    .amtToggle button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    /* ---------- Clicker ---------- */
+    .clicker-wrap { display: flex; justify-content: center; margin: 14px 0 6px; }
+    .clicker {
+      -webkit-appearance: none; appearance: none; border: none;
+      width: 170px; height: 170px; border-radius: 50%; font-size: 78px; cursor: pointer; color: #fff;
+      background: radial-gradient(circle at 50% 35%, #2b2b45, #14141f 70%);
+      box-shadow: 0 0 0 4px var(--border), 0 12px 30px rgba(139,92,246,.35);
+      transition: transform .06s, box-shadow .2s;
+      display: flex; align-items: center; justify-content: center; touch-action: manipulation;
+    }
+    .clicker:active { transform: scale(0.93); box-shadow: 0 0 0 4px var(--accent), 0 6px 18px rgba(139,92,246,.5); }
+    .hint { text-align: center; color: var(--muted); font-size: 12px; margin: 4px 0 8px; line-height: 1.5; }
 
     .floaty {
-      position: fixed;
-      pointer-events: none;
-      font-weight: 800;
-      font-size: 22px;
-      color: var(--accent2);
-      text-shadow: 0 2px 8px rgba(0,0,0,.6);
-      animation: rise 900ms ease-out forwards;
-      z-index: 50;
+      position: fixed; pointer-events: none; font-weight: 800; font-size: 20px;
+      color: var(--accent2); text-shadow: 0 2px 8px rgba(0,0,0,.6);
+      animation: rise 900ms ease-out forwards; z-index: 60;
     }
-    @keyframes rise {
-      from { opacity: 1; transform: translate(-50%, 0) scale(1); }
-      to { opacity: 0; transform: translate(-50%, -70px) scale(1.3); }
+    @keyframes rise { from { opacity: 1; transform: translate(-50%,0) scale(1);} to { opacity: 0; transform: translate(-50%,-70px) scale(1.3);} }
+
+    /* ---------- Business upgrades ---------- */
+    .upgrades { display: flex; gap: 4px; flex-wrap: wrap; }
+    .dot { width: 14px; height: 14px; border-radius: 4px; background: var(--panel2); border: 1px solid var(--border); }
+    .dot.on { background: var(--gold); border-color: var(--gold); }
+
+    /* ---------- Spin wheel ---------- */
+    .wheel-wrap { position: relative; width: 260px; height: 260px; margin: 10px auto; }
+    .wheel {
+      width: 100%; height: 100%; border-radius: 50%;
+      border: 6px solid var(--panel2);
+      transition: transform 4.2s cubic-bezier(.17,.67,.16,.99);
+      position: relative; overflow: hidden;
+    }
+    .wheel .seg {
+      position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+      display: flex; align-items: flex-start; justify-content: center;
+      font-size: 12px; font-weight: 800; color: #10101a; padding-top: 12px;
+    }
+    .wheel .seg span { display: inline-block; }
+    .wheel-hub {
+      position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; border-radius: 50%;
+      transform: translate(-50%,-50%); background: var(--panel); border: 3px solid var(--gold);
+      display: flex; align-items: center; justify-content: center; font-size: 22px; z-index: 3;
+    }
+    .wheel-ptr {
+      position: absolute; left: 50%; top: -6px; transform: translateX(-50%);
+      width: 0; height: 0; border-left: 12px solid transparent; border-right: 12px solid transparent;
+      border-top: 22px solid var(--gold); z-index: 4; filter: drop-shadow(0 2px 3px rgba(0,0,0,.5));
     }
 
-    footer {
-      width: 100%;
-      max-width: 560px;
-      padding: 10px 16px 30px;
-      text-align: center;
-      color: var(--muted);
-      font-size: 12px;
+    /* ---------- Achievements ---------- */
+    .ach {
+      display: flex; align-items: center; gap: 11px;
+      background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 11px 12px;
     }
-    .controls { display: flex; gap: 10px; justify-content: center; margin-top: 10px; }
-    .controls button {
-      -webkit-appearance: none; appearance: none;
-      background: var(--panel); color: var(--muted);
-      border: 1px solid var(--border); border-radius: 10px;
-      padding: 8px 14px; font-size: 12px; cursor: pointer;
-      touch-action: manipulation;
-    }
-    .controls button:active { transform: scale(0.97); }
+    .ach.locked { opacity: .5; }
+    .ach.done { border-color: var(--gold); }
+    .ach .icon { font-size: 26px; width: 38px; text-align: center; }
+    .ach .name { font-weight: 700; font-size: 14px; }
+    .ach .desc { font-size: 11px; color: var(--muted); margin-top: 1px; }
+    .ach .rew { font-size: 11px; color: var(--gold); margin-top: 2px; }
+    .ach .chk { font-size: 20px; }
 
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .mono { font-variant-numeric: tabular-nums; }
+
+    /* ---------- Toast & popup ---------- */
     .toast {
-      position: fixed;
-      left: 50%;
-      bottom: 24px;
-      transform: translateX(-50%) translateY(20px);
-      background: var(--panel2);
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 10px 16px;
-      border-radius: 12px;
-      font-size: 13px;
-      opacity: 0;
-      transition: opacity .25s ease, transform .25s ease;
-      z-index: 100;
-      pointer-events: none;
+      position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%) translateY(20px);
+      background: var(--panel2); border: 1px solid var(--border); color: var(--text);
+      padding: 10px 16px; border-radius: 12px; font-size: 13px; opacity: 0;
+      transition: opacity .25s, transform .25s; z-index: 100; pointer-events: none; max-width: 90%; text-align: center;
     }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    .popup {
+      position: fixed; inset: 0; z-index: 200; display: none;
+      align-items: center; justify-content: center; background: rgba(0,0,0,.6); padding: 20px;
+    }
+    .popup.show { display: flex; }
+    .popup .box {
+      background: var(--panel); border: 1px solid var(--gold); border-radius: 18px;
+      padding: 22px; max-width: 360px; width: 100%; text-align: center;
+    }
+    .popup .big { font-size: 46px; }
+    .popup h3 { margin: 8px 0 6px; }
+    .popup p { color: var(--muted); font-size: 13px; margin: 4px 0 16px; white-space: pre-line; }
+
+    .foot { text-align: center; color: var(--muted); font-size: 11px; margin-top: 22px; }
+    .foot a { color: var(--accent2); }
+    .rowbtns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
   </style>
 </head>
 <body>
-  <header>
-    <h1>💀 Idle Death</h1>
-    <p class="tagline">An idle game like LARP TYCOON richman idle</p>
-  </header>
+  <div class="wrap">
+    <header>
+      <h1>💀 Idle Death</h1>
+      <p class="tagline">An idle game like LARP TYCOON richman idle</p>
+    </header>
 
-  <main>
-    <div class="stats">
-      <div class="souls"><span id="souls">0</span> <small>souls</small></div>
-      <div class="rate"><span id="rate">0</span> souls / sec &nbsp;·&nbsp; <span id="perClick">1</span> / tap</div>
+    <div class="hud">
+      <div class="cell"><div class="k">Souls</div><div class="v souls mono" id="hudSouls">0</div></div>
+      <div class="cell"><div class="k">Per sec</div><div class="v rate mono" id="hudRate">0</div></div>
+      <div class="cell"><div class="k">Multiplier</div><div class="v mult mono" id="hudMult">×1</div></div>
     </div>
 
-    <div class="clicker-wrap">
-      <button class="clicker" id="clicker" aria-label="Reap souls">☠️</button>
-    </div>
-    <p class="hint">Tap the reaper to collect souls. Buy reapers to earn while you're away.</p>
+    <div id="view"></div>
 
-    <div class="section-title">Reapers &amp; Upgrades</div>
-    <div class="shop" id="shop"></div>
-  </main>
-
-  <footer>
-    <div>Progress saves automatically to this device.</div>
-    <div class="controls">
-      <button id="saveBtn">Save now</button>
-      <button id="resetBtn">Reset</button>
+    <div class="foot">
+      Progress saves automatically to this device ·
+      <a href="https://nors3ai.github.io/Idle-Death/">nors3ai.github.io/Idle-Death</a>
+      <div class="rowbtns">
+        <button class="btn ghost" id="saveBtn">Save</button>
+        <button class="btn ghost" id="exportBtn">Export</button>
+        <button class="btn ghost" id="importBtn">Import</button>
+        <button class="btn danger" id="hardResetBtn">Hard reset</button>
+      </div>
     </div>
-  </footer>
+  </div>
+
+  <div class="tabbar"><div class="inner" id="tabbar"></div></div>
 
   <div class="toast" id="toast"></div>
+
+  <div class="popup" id="popup">
+    <div class="box">
+      <div class="big" id="popIcon">🎉</div>
+      <h3 id="popTitle">Title</h3>
+      <p id="popText">Text</p>
+      <button class="btn gold" id="popOk" style="width:100%">Nice!</button>
+    </div>
+  </div>
 
   <script>
   (function () {
     "use strict";
 
-    // ---- iOS: kill double-tap-to-zoom explicitly (belt & braces with the CSS) ----
+    /* =========================================================
+       iOS UX: no double-tap zoom, no pinch zoom, no text select
+       ========================================================= */
     var lastTouchEnd = 0;
     document.addEventListener("touchend", function (e) {
       var now = Date.now();
-      if (now - lastTouchEnd <= 350) {
-        e.preventDefault(); // second quick tap => cancel the zoom gesture
-      }
+      if (now - lastTouchEnd <= 350) e.preventDefault();
       lastTouchEnd = now;
     }, { passive: false });
-
-    // Block pinch-zoom gestures too (iOS Safari specific events)
     ["gesturestart", "gesturechange", "gestureend"].forEach(function (t) {
       document.addEventListener(t, function (e) { e.preventDefault(); }, { passive: false });
     });
-
-    // Prevent selection from starting (extra guard on top of user-select:none)
     document.addEventListener("selectstart", function (e) { e.preventDefault(); });
 
-    // ---- Game data ----
-    var SAVE_KEY = "idle-death-save-v1";
-
-    var UPGRADES = [
-      { id: "cursor",   icon: "🖐️", name: "Bony Hand",     desc: "A skeletal hand that taps for you.", baseCost: 15,     rate: 0.2 },
-      { id: "reaper",   icon: "🪦", name: "Lesser Reaper",  desc: "Harvests souls on its own.",         baseCost: 100,    rate: 1 },
-      { id: "hearse",   icon: "🚗", name: "Hearse",         desc: "Delivers souls in bulk.",            baseCost: 1100,   rate: 8 },
-      { id: "crypt",    icon: "⚰️", name: "Haunted Crypt",  desc: "A crypt that never stops filling.",  baseCost: 12000,  rate: 47 },
-      { id: "portal",   icon: "🌀", name: "Death Portal",   desc: "A gateway to the beyond.",           baseCost: 130000, rate: 260 },
-      { id: "empire",   icon: "🏰", name: "LARP Empire",    desc: "Your richman idle death empire.",    baseCost: 1400000,rate: 1400 }
-    ];
-
-    var state = {
-      souls: 0,
-      perClick: 1,
-      owned: {},          // id -> count
-      lastSeen: Date.now()
-    };
-    UPGRADES.forEach(function (u) { state.owned[u.id] = 0; });
-
-    // ---- Persistence ----
-    function save() {
-      state.lastSeen = Date.now();
-      try {
-        localStorage.setItem(SAVE_KEY, JSON.stringify(state));
-      } catch (e) { /* storage may be unavailable */ }
+    /* =========================================================
+       Number formatting
+       ========================================================= */
+    var UNITS = ["","K","M","B","T","Qa","Qi","Sx","Sp","Oc","No","Dc","UDc","DDc","TDc","QaDc","QiDc","SxDc","SpDc","ODc","NDc","Vg"];
+    function fmt(n) {
+      if (!isFinite(n)) return "∞";
+      if (n < 0) return "-" + fmt(-n);
+      if (n < 1000) {
+        var r = Math.floor(n * 10) / 10;
+        return (r % 1 === 0 ? r.toFixed(0) : r.toFixed(1));
+      }
+      var tier = Math.floor(Math.log10(n) / 3);
+      if (tier >= UNITS.length) return n.toExponential(2);
+      var scaled = n / Math.pow(1000, tier);
+      return (Math.round(scaled * 100) / 100) + UNITS[tier];
+    }
+    function fmtTime(ms) {
+      var s = Math.max(0, Math.floor(ms / 1000));
+      var m = Math.floor(s / 60); s = s % 60;
+      var h = Math.floor(m / 60); m = m % 60;
+      if (h) return h + "h " + m + "m";
+      if (m) return m + "m " + s + "s";
+      return s + "s";
     }
 
+    /* =========================================================
+       Game data
+       ========================================================= */
+    // Businesses: each produces souls/sec per unit; each has 10 upgrades (x2 revenue each).
+    var BUSINESSES = [
+      { id: "plots",   icon: "🪦", name: "Graveyard Plots",   baseCost: 10,        costMul: 1.11, baseRev: 0.10 },
+      { id: "coffins", icon: "⚰️", name: "Coffin Factory",    baseCost: 130,       costMul: 1.11, baseRev: 1.1 },
+      { id: "flowers", icon: "💐", name: "Funeral Flowers",   baseCost: 1500,      costMul: 1.11, baseRev: 9 },
+      { id: "hearse",  icon: "🚗", name: "Hearse Fleet",      baseCost: 22000,     costMul: 1.11, baseRev: 62 },
+      { id: "cremat",  icon: "🔥", name: "Crematorium",       baseCost: 300000,    costMul: 1.11, baseRev: 460 },
+      { id: "tours",   icon: "👻", name: "Haunted Tours",     baseCost: 4.2e6,     costMul: 1.11, baseRev: 3400 },
+      { id: "exchange",icon: "💱", name: "Soul Exchange",     baseCost: 6e7,       costMul: 1.11, baseRev: 26000 },
+      { id: "resort",  icon: "🏝️", name: "Afterlife Resort",  baseCost: 9e8,       costMul: 1.11, baseRev: 210000 },
+      { id: "empire",  icon: "🏰", name: "LARP Death Empire", baseCost: 1.4e10,    costMul: 1.11, baseRev: 1.8e6 }
+    ];
+    var BIZ_UP_MUL = 2;               // each upgrade doubles that business
+    function bizUpCost(b, idx) { return b.baseCost * 30 * Math.pow(11, idx); }
+
+    // Assets that give a permanent global income multiplier (flex / net worth).
+    // mult = fractional bonus PER unit owned (e.g. 0.01 = +1%).
+    var VEHICLES = [
+      { id: "bicycle",  icon: "🚲", name: "Bicycle",        baseCost: 500,     costMul: 1.25, mult: 0.01 },
+      { id: "moto",     icon: "🏍️", name: "Motorcycle",     baseCost: 6000,    costMul: 1.25, mult: 0.02 },
+      { id: "car",      icon: "🚗", name: "Car",            baseCost: 65000,   costMul: 1.26, mult: 0.04 },
+      { id: "sports",   icon: "🏎️", name: "Sports Car",     baseCost: 800000,  costMul: 1.27, mult: 0.08 },
+      { id: "boat",     icon: "🚤", name: "Speed Boat",     baseCost: 9e6,     costMul: 1.28, mult: 0.15 },
+      { id: "yacht",    icon: "🛥️", name: "Mega Yacht",     baseCost: 1.2e8,   costMul: 1.29, mult: 0.30 },
+      { id: "heli",     icon: "🚁", name: "Helicopter",     baseCost: 1.6e9,   costMul: 1.30, mult: 0.55 },
+      { id: "jet",      icon: "🛩️", name: "Private Jet",    baseCost: 2.2e10,  costMul: 1.31, mult: 1.00 },
+      { id: "rocket",   icon: "🚀", name: "Death Rocket",   baseCost: 4e11,    costMul: 1.33, mult: 2.00 }
+    ];
+    var REALESTATE = [
+      { id: "apt",      icon: "🏢", name: "Apartment",       baseCost: 40000,   costMul: 1.26, mult: 0.03 },
+      { id: "house",    icon: "🏠", name: "Suburban House",  baseCost: 500000,  costMul: 1.27, mult: 0.07 },
+      { id: "mansion",  icon: "🏰", name: "Mansion",         baseCost: 7e6,     costMul: 1.28, mult: 0.16 },
+      { id: "sky",      icon: "🌆", name: "Skyscraper",      baseCost: 1e8,     costMul: 1.29, mult: 0.35 },
+      { id: "island",   icon: "🏝️", name: "Private Island",  baseCost: 1.5e9,   costMul: 1.31, mult: 0.70 },
+      { id: "city",     icon: "🌃", name: "Necropolis City", baseCost: 3e10,    costMul: 1.33, mult: 1.60 }
+    ];
+
+    // Museum: priceless items traded like STOCKS. Price random-walks and drifts up.
+    // Holding shares also grants a global multiplier (mult per share).
+    var MUSEUM = [
+      { id: "vase",   icon: "🏺", name: "Ancient Vase",     base: 25000,   vol: 0.05, drift: 0.004, mult: 0.02 },
+      { id: "art",    icon: "🖼️", name: "Lost Masterpiece", base: 250000,  vol: 0.06, drift: 0.005, mult: 0.05 },
+      { id: "crown",  icon: "👑", name: "Cursed Crown",     base: 3e6,     vol: 0.07, drift: 0.006, mult: 0.12 },
+      { id: "fossil", icon: "🦕", name: "Dino Fossil",      base: 4e7,     vol: 0.08, drift: 0.006, mult: 0.28 },
+      { id: "gem",    icon: "💎", name: "Hope Diamond",     base: 6e8,     vol: 0.09, drift: 0.007, mult: 0.60 },
+      { id: "meteor", icon: "☄️", name: "Soul Meteorite",   base: 9e9,     vol: 0.11, drift: 0.008, mult: 1.30 }
+    ];
+
+    // Spin wheel segments (weighted).
+    var SPIN_SEGMENTS = [
+      { label: "Bust",     color: "#3b3b52", weight: 14, kind: "nothing" },
+      { label: "60s cash", color: "#34d399", weight: 22, kind: "income", secs: 60 },
+      { label: "x2 60s",   color: "#22d3ee", weight: 14, kind: "boost", mult: 2, secs: 60 },
+      { label: "5m cash",  color: "#8b5cf6", weight: 16, kind: "income", secs: 300 },
+      { label: "Free Car", color: "#fbbf24", weight: 10, kind: "vehicle" },
+      { label: "x3 45s",   color: "#2dd4bf", weight: 10, kind: "boost", mult: 3, secs: 45 },
+      { label: "+1 coin",  color: "#f472b6", weight: 8,  kind: "coin" },
+      { label: "JACKPOT",  color: "#f59e0b", weight: 6,  kind: "income", secs: 3600 }
+    ];
+    var SPIN_COOLDOWN = 30 * 60 * 1000; // 30 min free spin
+
+    // Achievements. reward: {mult:x} adds to a global achievement multiplier; {coins:n} grants prestige coins.
+    var ACHIEVEMENTS = [
+      { id: "firstclick", icon: "👆", name: "First Reaping",      desc: "Tap the reaper once.",              reward: { mult: 0.02 }, test: function (s) { return s.stats.clicks >= 1; } },
+      { id: "click100",   icon: "🖐️", name: "Busy Hands",         desc: "Tap 100 times.",                    reward: { mult: 0.05 }, test: function (s) { return s.stats.clicks >= 100; } },
+      { id: "souls1k",    icon: "💰", name: "Pocket Change",      desc: "Hold 1,000 souls.",                 reward: { mult: 0.03 }, test: function (s) { return s.souls >= 1e3; } },
+      { id: "souls1m",    icon: "🤑", name: "Soul Millionaire",   desc: "Hold 1,000,000 souls.",             reward: { mult: 0.05 }, test: function (s) { return s.souls >= 1e6; } },
+      { id: "souls1b",    icon: "🏦", name: "Soul Billionaire",   desc: "Hold 1,000,000,000 souls.",         reward: { mult: 0.10 }, test: function (s) { return s.souls >= 1e9; } },
+      { id: "biz1",       icon: "🏬", name: "Open for Death",     desc: "Buy your first business unit.",     reward: { mult: 0.03 }, test: function ()  { return totalBizUnits() >= 1; } },
+      { id: "biz100",     icon: "🏭", name: "Death Conglomerate", desc: "Own 100 business units total.",     reward: { mult: 0.08 }, test: function ()  { return totalBizUnits() >= 100; } },
+      { id: "bizmax",     icon: "⭐", name: "Fully Upgraded",     desc: "Max all 10 upgrades on a business.",reward: { mult: 0.10 }, test: function (s) { return BUSINESSES.some(function (b) { return s.biz[b.id].up >= 10; }); } },
+      { id: "bike",       icon: "🚲", name: "On a Roll",          desc: "Buy your first bicycle.",           reward: { mult: 0.02 }, test: function (s) { return (s.assets.bicycle || 0) >= 1; } },
+      { id: "car",        icon: "🚗", name: "Licensed to Reap",   desc: "Own a car.",                        reward: { mult: 0.03 }, test: function (s) { return (s.assets.car || 0) >= 1; } },
+      { id: "yacht",      icon: "🛥️", name: "Set Sail",           desc: "Own a mega yacht.",                 reward: { mult: 0.06 }, test: function (s) { return (s.assets.yacht || 0) >= 1; } },
+      { id: "heli",       icon: "🚁", name: "Sky Reaper",         desc: "Own a helicopter.",                 reward: { mult: 0.08 }, test: function (s) { return (s.assets.heli || 0) >= 1; } },
+      { id: "garage",     icon: "🅿️", name: "Full Garage",        desc: "Own one of every vehicle.",         reward: { mult: 0.15 }, test: function (s) { return VEHICLES.every(function (v) { return (s.assets[v.id] || 0) >= 1; }); } },
+      { id: "mansion",    icon: "🏰", name: "Landlord of the Dead", desc: "Own a mansion.",                  reward: { mult: 0.06 }, test: function (s) { return (s.assets.mansion || 0) >= 1; } },
+      { id: "island",     icon: "🏝️", name: "Island Life",        desc: "Own a private island.",             reward: { mult: 0.10 }, test: function (s) { return (s.assets.island || 0) >= 1; } },
+      { id: "curator",    icon: "🏛️", name: "Curator",            desc: "Hold a share of every museum piece.", reward: { mult: 0.20 }, test: function (s) { return MUSEUM.every(function (m) { return (s.museum[m.id] || 0) >= 1; }); } },
+      { id: "trader",     icon: "📈", name: "Priceless Trader",   desc: "Hold 50 total museum shares.",      reward: { mult: 0.10 }, test: function ()  { return totalMuseumShares() >= 50; } },
+      { id: "spin1",      icon: "🎡", name: "Feeling Lucky",      desc: "Spin the wheel once.",              reward: { mult: 0.03 }, test: function (s) { return s.stats.spins >= 1; } },
+      { id: "spin25",     icon: "🍀", name: "High Roller",        desc: "Spin the wheel 25 times.",          reward: { mult: 0.08 }, test: function (s) { return s.stats.spins >= 25; } },
+      { id: "jackpot",    icon: "💥", name: "Jackpot!",           desc: "Win the wheel jackpot.",            reward: { coins: 1 },  test: function (s) { return s.stats.jackpots >= 1; } },
+      { id: "prestige1",  icon: "☠️", name: "Reborn",             desc: "Prestige for the first time.",      reward: { mult: 0.25 }, test: function (s) { return s.stats.prestiges >= 1; } },
+      { id: "prestige5",  icon: "🌌", name: "Cycle of Death",     desc: "Prestige 5 times.",                 reward: { mult: 0.50 }, test: function (s) { return s.stats.prestiges >= 5; } },
+      { id: "coins10",    icon: "💠", name: "Coin Collector",     desc: "Bank 10 reaper coins.",             reward: { mult: 0.15 }, test: function (s) { return s.coins >= 10; } },
+      { id: "earned1t",   icon: "♾️", name: "Trillionaire",       desc: "Earn 1 trillion souls all-time.",   reward: { mult: 0.20 }, test: function (s) { return s.stats.totalEarned >= 1e12; } }
+    ];
+
+    /* =========================================================
+       State
+       ========================================================= */
+    function freshState() {
+      var s = {
+        souls: 0,
+        coins: 0,              // prestige currency ("reaper coins")
+        prestigePoints: 0,     // permanent prestige multiplier source
+        perClickBase: 1,
+        biz: {},               // id -> {n, up}
+        assets: {},            // id -> count (vehicles + realestate)
+        museum: {},            // id -> shares held
+        market: {},            // id -> current price
+        ach: {},               // id -> true
+        boost: { mult: 1, until: 0 },
+        spinLast: 0,
+        buyAmt: 1,             // 1 / 10 / 100 / -1(Max)
+        stats: { clicks: 0, spins: 0, jackpots: 0, prestiges: 0, totalEarned: 0 },
+        lastSeen: Date.now()
+      };
+      BUSINESSES.forEach(function (b) { s.biz[b.id] = { n: 0, up: 0 }; });
+      MUSEUM.forEach(function (m) { s.market[m.id] = m.base; s.museum[m.id] = 0; });
+      return s;
+    }
+    var state = freshState();
+
+    var SAVE_KEY = "idle-death-save-v2";
+
+    function save() {
+      state.lastSeen = Date.now();
+      try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (e) {}
+    }
     function load() {
       try {
         var raw = localStorage.getItem(SAVE_KEY);
         if (!raw) return;
-        var data = JSON.parse(raw);
-        state.souls = Number(data.souls) || 0;
-        state.perClick = Number(data.perClick) || 1;
-        state.lastSeen = Number(data.lastSeen) || Date.now();
-        UPGRADES.forEach(function (u) {
-          state.owned[u.id] = Number(data.owned && data.owned[u.id]) || 0;
+        var d = JSON.parse(raw);
+        var s = freshState();
+        s.souls = +d.souls || 0;
+        s.coins = +d.coins || 0;
+        s.prestigePoints = +d.prestigePoints || 0;
+        s.perClickBase = +d.perClickBase || 1;
+        s.spinLast = +d.spinLast || 0;
+        s.buyAmt = d.buyAmt || 1;
+        s.lastSeen = +d.lastSeen || Date.now();
+        if (d.boost) s.boost = { mult: +d.boost.mult || 1, until: +d.boost.until || 0 };
+        if (d.stats) ["clicks","spins","jackpots","prestiges","totalEarned"].forEach(function (k) { s.stats[k] = +d.stats[k] || 0; });
+        BUSINESSES.forEach(function (b) { if (d.biz && d.biz[b.id]) s.biz[b.id] = { n: +d.biz[b.id].n || 0, up: Math.min(10, +d.biz[b.id].up || 0) }; });
+        if (d.assets) VEHICLES.concat(REALESTATE).forEach(function (a) { s.assets[a.id] = +d.assets[a.id] || 0; });
+        MUSEUM.forEach(function (m) {
+          s.museum[m.id] = (d.museum && +d.museum[m.id]) || 0;
+          s.market[m.id] = (d.market && +d.market[m.id]) || m.base;
         });
-      } catch (e) { /* corrupt save -> fresh start */ }
+        if (d.ach) Object.keys(d.ach).forEach(function (k) { s.ach[k] = !!d.ach[k]; });
+        state = s;
+      } catch (e) {}
     }
 
-    // ---- Derived values ----
-    function costOf(u) {
-      // classic idle-game 1.15x cost scaling
-      return Math.ceil(u.baseCost * Math.pow(1.15, state.owned[u.id]));
+    /* =========================================================
+       Derived values
+       ========================================================= */
+    function achMult() {
+      var m = 1;
+      ACHIEVEMENTS.forEach(function (a) { if (state.ach[a.id] && a.reward.mult) m += a.reward.mult; });
+      return m;
+    }
+    function assetMult() {
+      var m = 1;
+      VEHICLES.concat(REALESTATE).forEach(function (a) { m += (state.assets[a.id] || 0) * a.mult; });
+      return m;
+    }
+    function museumMult() {
+      var m = 1;
+      MUSEUM.forEach(function (mu) { m += (state.museum[mu.id] || 0) * mu.mult; });
+      return m;
+    }
+    function prestigeMult() { return 1 + state.prestigePoints * 0.03; }
+    function boostMult() { return (state.boost.until > Date.now()) ? state.boost.mult : 1; }
+    function globalMult() { return prestigeMult() * achMult() * assetMult() * museumMult() * boostMult(); }
+
+    function bizUnitMult(b) { return Math.pow(BIZ_UP_MUL, state.biz[b.id].up); }
+    function baseIncomePerSec() {
+      var r = 0;
+      BUSINESSES.forEach(function (b) { r += b.baseRev * state.biz[b.id].n * bizUnitMult(b); });
+      return r;
+    }
+    function incomePerSec() { return baseIncomePerSec() * globalMult(); }
+    function perClick() { return state.perClickBase * globalMult(); }
+
+    function totalBizUnits() { var t = 0; BUSINESSES.forEach(function (b) { t += state.biz[b.id].n; }); return t; }
+    function totalMuseumShares() { var t = 0; MUSEUM.forEach(function (m) { t += (state.museum[m.id] || 0); }); return t; }
+    function netWorth() {
+      var w = state.souls;
+      MUSEUM.forEach(function (m) { w += (state.museum[m.id] || 0) * state.market[m.id]; });
+      return w;
     }
 
-    function soulsPerSecond() {
-      var sps = 0;
-      UPGRADES.forEach(function (u) { sps += u.rate * state.owned[u.id]; });
-      return sps;
+    // cost of buying `k` units given geometric scaling
+    function bulkCost(baseCost, mul, owned, k) {
+      return baseCost * Math.pow(mul, owned) * (Math.pow(mul, k) - 1) / (mul - 1);
+    }
+    function maxAffordable(baseCost, mul, owned, cash) {
+      var first = baseCost * Math.pow(mul, owned);
+      if (cash < first) return 0;
+      var k = Math.floor(Math.log(cash * (mul - 1) / first + 1) / Math.log(mul));
+      return Math.max(0, k);
+    }
+    function buyQty(baseCost, mul, owned) {
+      if (state.buyAmt === -1) return Math.max(1, maxAffordable(baseCost, mul, owned, state.souls));
+      return state.buyAmt;
     }
 
-    // ---- Formatting ----
-    var UNITS = ["", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc"];
-    function fmt(n) {
-      if (n < 1000) return (Math.floor(n * 10) / 10).toString().replace(/\.0$/, "");
-      var tier = Math.floor(Math.log10(n) / 3);
-      if (tier >= UNITS.length) tier = UNITS.length - 1;
-      var scaled = n / Math.pow(1000, tier);
-      return (Math.round(scaled * 100) / 100) + UNITS[tier];
+    /* =========================================================
+       Actions
+       ========================================================= */
+    function addSouls(n) { state.souls += n; if (n > 0) state.stats.totalEarned += n; }
+
+    function buyBusiness(b) {
+      var k = buyQty(b.baseCost, b.costMul, state.biz[b.id].n);
+      var cost = bulkCost(b.baseCost, b.costMul, state.biz[b.id].n, k);
+      if (state.buyAmt === -1) { if (k < 1) return; } else if (state.souls < cost) return;
+      state.souls -= cost;
+      state.biz[b.id].n += k;
+      afterChange();
+    }
+    function buyBizUpgrade(b) {
+      if (state.biz[b.id].up >= 10) return;
+      var cost = bizUpCost(b, state.biz[b.id].up);
+      if (state.souls < cost) return;
+      state.souls -= cost;
+      state.biz[b.id].up += 1;
+      afterChange();
+    }
+    function buyAsset(a) {
+      var owned = state.assets[a.id] || 0;
+      var k = buyQty(a.baseCost, a.costMul, owned);
+      var cost = bulkCost(a.baseCost, a.costMul, owned, k);
+      if (state.buyAmt === -1) { if (k < 1) return; } else if (state.souls < cost) return;
+      state.souls -= cost;
+      state.assets[a.id] = owned + k;
+      afterChange();
+    }
+    function buyShare(m, qty) {
+      var price = state.market[m.id];
+      var k = (qty === -1) ? Math.floor(state.souls / price) : qty;
+      if (k < 1 || state.souls < price * k) {
+        k = Math.floor(state.souls / price);
+        if (k < 1) return;
+      }
+      state.souls -= price * k;
+      state.museum[m.id] = (state.museum[m.id] || 0) + k;
+      afterChange();
+    }
+    function sellShare(m, qty) {
+      var held = state.museum[m.id] || 0;
+      var k = (qty === -1) ? held : Math.min(qty, held);
+      if (k < 1) return;
+      addSouls(state.market[m.id] * 0.98 * k); // small spread
+      state.museum[m.id] = held - k;
+      afterChange();
     }
 
-    // ---- Rendering ----
-    var elSouls = document.getElementById("souls");
-    var elRate = document.getElementById("rate");
-    var elPerClick = document.getElementById("perClick");
-    var shopEl = document.getElementById("shop");
+    function afterChange() { checkAchievements(); refresh(); save(); }
 
-    var itemEls = {};
-    function buildShop() {
-      UPGRADES.forEach(function (u) {
-        var btn = document.createElement("button");
-        btn.className = "item";
-        btn.innerHTML =
-          '<div class="icon">' + u.icon + '</div>' +
-          '<div class="body">' +
-            '<div class="name">' + u.name + '</div>' +
-            '<div class="desc">' + u.desc + '</div>' +
-            '<div class="owned">Owned: <span data-owned></span> · +' + u.rate + '/sec each</div>' +
-          '</div>' +
-          '<div class="cost"><span data-cost></span> 💀</div>';
-        btn.addEventListener("click", function () { buy(u); });
-        shopEl.appendChild(btn);
-        itemEls[u.id] = {
-          root: btn,
-          owned: btn.querySelector("[data-owned]"),
-          cost: btn.querySelector("[data-cost]")
-        };
+    /* =========================================================
+       Market simulation (museum items as stocks)
+       ========================================================= */
+    function stepMarket() {
+      MUSEUM.forEach(function (m) {
+        var p = state.market[m.id];
+        var shock = (Math.random() - 0.5) * 2 * m.vol; // +/- vol
+        p = p * (1 + m.drift + shock);
+        var floor = m.base * 0.35;
+        if (p < floor) p = floor;
+        state.market[m.id] = p;
       });
     }
 
-    function render() {
-      elSouls.textContent = fmt(state.souls);
-      elRate.textContent = fmt(soulsPerSecond());
-      elPerClick.textContent = fmt(state.perClick);
-      UPGRADES.forEach(function (u) {
-        var refs = itemEls[u.id];
-        var c = costOf(u);
-        refs.owned.textContent = state.owned[u.id];
-        refs.cost.textContent = fmt(c);
-        var afford = state.souls >= c;
-        refs.root.disabled = !afford;
-        refs.root.classList.toggle("cant", !afford);
+    /* =========================================================
+       Spin wheel
+       ========================================================= */
+    function pickSegment() {
+      var total = 0; SPIN_SEGMENTS.forEach(function (s) { total += s.weight; });
+      var r = Math.random() * total, acc = 0;
+      for (var i = 0; i < SPIN_SEGMENTS.length; i++) { acc += SPIN_SEGMENTS[i].weight; if (r <= acc) return i; }
+      return 0;
+    }
+    var spinning = false;
+    function applySpinReward(seg) {
+      var msg;
+      if (seg.kind === "nothing") { msg = "Bust — better luck next spin!"; }
+      else if (seg.kind === "income") {
+        var amt = Math.max(incomePerSec() * seg.secs, perClick() * 25 + 50);
+        addSouls(amt);
+        if (seg.secs >= 3600) { state.stats.jackpots++; msg = "JACKPOT! +" + fmt(amt) + " souls"; }
+        else msg = "+" + fmt(amt) + " souls (" + seg.secs + "s of income)";
+      }
+      else if (seg.kind === "boost") {
+        state.boost = { mult: seg.mult, until: Date.now() + seg.secs * 1000 };
+        msg = "×" + seg.mult + " income for " + seg.secs + "s!";
+      }
+      else if (seg.kind === "coin") { state.coins += 1; msg = "+1 reaper coin 💠"; }
+      else if (seg.kind === "vehicle") {
+        var affordable = VEHICLES.filter(function (v) { return netWorth() >= v.baseCost; });
+        var pick = affordable.length ? affordable[affordable.length - 1] : VEHICLES[0];
+        state.assets[pick.id] = (state.assets[pick.id] || 0) + 1;
+        msg = "Won a free " + pick.name + " " + pick.icon + "!";
+      }
+      state.stats.spins++;
+      checkAchievements();
+      showPopup("🎡", "You spun: " + seg.label, msg);
+      refresh(); save();
+    }
+
+    /* =========================================================
+       Prestige
+       ========================================================= */
+    function prestigeGain() { return Math.floor(Math.sqrt(state.stats.totalEarned / 1e9)); }
+    function canPrestige() { return prestigeGain() >= 1; }
+    function doPrestige() {
+      var gain = prestigeGain();
+      if (gain < 1) return;
+      var keepStats = state.stats;
+      var keepAch = state.ach;
+      var keepCoins = state.coins;
+      var keepPP = state.prestigePoints + gain;
+      var keepAmt = state.buyAmt;
+      keepStats.prestiges += 1;
+      var fresh = freshState();
+      fresh.stats = keepStats;
+      fresh.ach = keepAch;
+      fresh.coins = keepCoins;
+      fresh.prestigePoints = keepPP;
+      fresh.buyAmt = keepAmt;
+      state = fresh;
+      showPopup("☠️", "Reborn!", "You gained " + fmt(gain) + " prestige points.\nPermanent multiplier is now ×" + fmt(prestigeMult()) + ".");
+      checkAchievements();
+      buildTab(currentTab); refresh(); save();
+    }
+
+    /* =========================================================
+       Achievements
+       ========================================================= */
+    function checkAchievements() {
+      ACHIEVEMENTS.forEach(function (a) {
+        if (!state.ach[a.id] && a.test(state)) {
+          state.ach[a.id] = true;
+          if (a.reward.coins) state.coins += a.reward.coins;
+          var rew = a.reward.mult ? ("+" + Math.round(a.reward.mult * 100) + "% income") : ("+" + a.reward.coins + " reaper coin");
+          showPopup(a.icon, "Achievement: " + a.name, a.desc + "\nReward: " + rew);
+          updateAchBadge();
+        }
       });
     }
 
-    // ---- Actions ----
-    function buy(u) {
-      var c = costOf(u);
-      if (state.souls < c) return;
-      state.souls -= c;
-      state.owned[u.id] += 1;
-      render();
+    /* =========================================================
+       UI helpers
+       ========================================================= */
+    function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
+
+    var TABS = [
+      { id: "tap",     ic: "💀", label: "Reap" },
+      { id: "biz",     ic: "🏢", label: "Biz" },
+      { id: "assets",  ic: "🏎️", label: "Assets" },
+      { id: "estate",  ic: "🏰", label: "Estate" },
+      { id: "market",  ic: "📈", label: "Museum" },
+      { id: "spin",    ic: "🎡", label: "Spin" },
+      { id: "prestige",ic: "☠️", label: "Prestige" },
+      { id: "ach",     ic: "🏆", label: "Awards" }
+    ];
+    var currentTab = "tap";
+    var view = document.getElementById("view");
+    var tabbar = document.getElementById("tabbar");
+    var updaters = [];
+
+    function buildTabbar() {
+      TABS.forEach(function (t) {
+        var b = el("button");
+        b.dataset.tab = t.id;
+        b.innerHTML = '<span class="ic">' + t.ic + '</span>' + t.label +
+          (t.id === "ach" ? '<span class="badge" id="achBadge" style="display:none">0</span>' : '');
+        b.addEventListener("click", function () { switchTab(t.id); });
+        tabbar.appendChild(b);
+      });
+    }
+    function switchTab(id) {
+      currentTab = id;
+      Array.prototype.forEach.call(tabbar.children, function (c) { c.classList.toggle("active", c.dataset.tab === id); });
+      buildTab(id);
+      refresh();
+    }
+    function updateAchBadge() {
+      var badge = document.getElementById("achBadge");
+      if (!badge) return;
+      var have = 0;
+      ACHIEVEMENTS.forEach(function (a) { if (state.ach[a.id]) have++; });
+      badge.textContent = have + "/" + ACHIEVEMENTS.length;
+      badge.style.display = "inline-block";
+    }
+
+    function amountToggle() {
+      var opts = [{ v: 1, t: "×1" }, { v: 10, t: "×10" }, { v: 100, t: "×100" }, { v: -1, t: "MAX" }];
+      var wrap = el("div", "amtToggle");
+      opts.forEach(function (o) {
+        var b = el("button", state.buyAmt === o.v ? "active" : "");
+        b.textContent = o.t;
+        b.addEventListener("click", function () { state.buyAmt = o.v; buildTab(currentTab); refresh(); });
+        wrap.appendChild(b);
+      });
+      return wrap;
+    }
+
+    function buildTab(id) {
+      view.innerHTML = "";
+      updaters = [];
+      if (id === "tap") buildTap();
+      else if (id === "biz") buildBiz();
+      else if (id === "assets") buildAssets();
+      else if (id === "estate") buildEstate();
+      else if (id === "market") buildMarket();
+      else if (id === "spin") buildSpin();
+      else if (id === "prestige") buildPrestige();
+      else if (id === "ach") buildAch();
+    }
+
+    /* ---------- Tap tab ---------- */
+    function buildTap() {
+      var wrap = el("div", "clicker-wrap");
+      var btn = el("button", "clicker"); btn.textContent = "☠️"; btn.setAttribute("aria-label", "Reap souls");
+      btn.addEventListener("pointerdown", function (e) {
+        e.preventDefault();
+        addSouls(perClick());
+        floaty("+" + fmt(perClick()), e.clientX, e.clientY);
+        state.stats.clicks++;
+        checkAchievements();
+        refresh();
+      });
+      wrap.appendChild(btn);
+      view.appendChild(wrap);
+      view.appendChild(el("p", "hint", "Tap the reaper to collect souls. Build businesses so it earns while you're away — this clicker becomes fully idle over time."));
+
+      var card = el("div", "card");
+      card.appendChild(el("div", "section-title", "<span>Empire summary</span>"));
+      var g = el("div", "grid2");
+      var cells = [
+        ["Net worth", function () { return fmt(netWorth()); }],
+        ["Income / sec", function () { return fmt(incomePerSec()); }],
+        ["Per tap", function () { return fmt(perClick()); }],
+        ["Global multiplier", function () { return "×" + fmt(globalMult()); }],
+        ["Prestige points", function () { return fmt(state.prestigePoints); }],
+        ["Reaper coins 💠", function () { return fmt(state.coins); }]
+      ];
+      cells.forEach(function (c) {
+        var box = el("div", "card"); box.style.padding = "10px";
+        var kEl = el("div"); kEl.style.cssText = "font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px"; kEl.textContent = c[0];
+        var vEl = el("div", "mono"); vEl.style.cssText = "font-size:18px;font-weight:800;margin-top:2px";
+        box.appendChild(kEl); box.appendChild(vEl);
+        updaters.push(function () { vEl.textContent = c[1](); });
+        g.appendChild(box);
+      });
+      card.appendChild(g);
+      view.appendChild(card);
+    }
+
+    /* ---------- Business tab ---------- */
+    function buildBiz() {
+      var head = el("div", "section-title");
+      head.appendChild(el("span", null, "Businesses · 10 upgrades each"));
+      head.appendChild(amountToggle());
+      view.appendChild(head);
+
+      var list = el("div", "list");
+      BUSINESSES.forEach(function (b) {
+        var row = el("div", "card");
+        var top = el("div", "item"); top.style.cssText = "background:transparent;border:none;padding:0";
+        top.appendChild(el("div", "icon", b.icon));
+        var body = el("div", "body");
+        body.appendChild(el("div", "name", b.name));
+        var meta = el("div", "meta"); body.appendChild(meta);
+        var own = el("div", "own"); body.appendChild(own);
+        top.appendChild(body);
+        var right = el("div", "right");
+        var cost = el("div", "cost"); right.appendChild(cost);
+        var qty = el("div", "own"); right.appendChild(qty);
+        top.appendChild(right);
+        top.addEventListener("click", function () { buyBusiness(b); });
+        row.appendChild(top);
+
+        var upWrap = el("div"); upWrap.style.cssText = "display:flex;align-items:center;gap:8px;margin-top:10px";
+        var dots = el("div", "upgrades");
+        var dotEls = [];
+        for (var i = 0; i < 10; i++) { var d = el("div", "dot"); dots.appendChild(d); dotEls.push(d); }
+        upWrap.appendChild(dots);
+        var upBtn = el("button", "btn ghost"); upBtn.style.marginLeft = "auto";
+        upBtn.addEventListener("click", function () { buyBizUpgrade(b); });
+        upWrap.appendChild(upBtn);
+        row.appendChild(upWrap);
+        list.appendChild(row);
+
+        updaters.push(function () {
+          var st = state.biz[b.id];
+          var perSec = b.baseRev * st.n * bizUnitMult(b) * globalMult();
+          meta.textContent = "+" + fmt(perSec) + "/sec · upgrade ×" + fmt(bizUnitMult(b));
+          own.textContent = "Owned: " + st.n;
+          var k = buyQty(b.baseCost, b.costMul, st.n);
+          var c = bulkCost(b.baseCost, b.costMul, st.n, Math.max(1, k));
+          cost.textContent = fmt(c) + " 💀";
+          qty.textContent = state.buyAmt === -1 ? "buy ×" + fmt(k) : "buy ×" + state.buyAmt;
+          top.classList.toggle("cant", state.souls < c);
+          for (var i = 0; i < 10; i++) dotEls[i].classList.toggle("on", i < st.up);
+          if (st.up >= 10) { upBtn.textContent = "MAX ✓"; upBtn.disabled = true; }
+          else {
+            var uc = bizUpCost(b, st.up);
+            upBtn.textContent = "Upgrade " + (st.up + 1) + "/10 · " + fmt(uc) + " 💀";
+            upBtn.disabled = state.souls < uc;
+          }
+        });
+      });
+      view.appendChild(list);
+    }
+
+    /* ---------- Assets (vehicles + real estate) ---------- */
+    function buildAssetList(title, subtitle, arr) {
+      var head = el("div", "section-title");
+      head.appendChild(el("span", null, title));
+      head.appendChild(amountToggle());
+      view.appendChild(head);
+      view.appendChild(el("p", "hint", subtitle));
+      var list = el("div", "list");
+      arr.forEach(function (a) {
+        var it = el("button", "item");
+        it.appendChild(el("div", "icon", a.icon));
+        var body = el("div", "body");
+        body.appendChild(el("div", "name", a.name));
+        body.appendChild(el("div", "desc", "+" + Math.round(a.mult * 100) + "% global income each"));
+        var own = el("div", "meta"); body.appendChild(own);
+        it.appendChild(body);
+        var right = el("div", "right");
+        var cost = el("div", "cost"); right.appendChild(cost);
+        var qty = el("div", "own"); right.appendChild(qty);
+        it.appendChild(right);
+        it.addEventListener("click", function () { buyAsset(a); });
+        list.appendChild(it);
+        updaters.push(function () {
+          var owned = state.assets[a.id] || 0;
+          own.textContent = "Owned: " + owned + " · +" + Math.round(owned * a.mult * 100) + "% total";
+          var k = buyQty(a.baseCost, a.costMul, owned);
+          var c = bulkCost(a.baseCost, a.costMul, owned, Math.max(1, k));
+          cost.textContent = fmt(c) + " 💀";
+          qty.textContent = state.buyAmt === -1 ? "buy ×" + fmt(k) : "buy ×" + state.buyAmt;
+          it.classList.toggle("cant", state.souls < c);
+        });
+      });
+      view.appendChild(list);
+    }
+    function buildAssets() { buildAssetList("Vehicles", "Cars, motorcycles, bicycles, boats, yachts, helicopters and more — each is a permanent income multiplier.", VEHICLES); }
+    function buildEstate() { buildAssetList("Real Estate", "Property empire — every holding permanently multiplies all of your income.", REALESTATE); }
+
+    /* ---------- Market / Museum (stocks) ---------- */
+    function buildMarket() {
+      view.appendChild(el("div", "section-title", "<span>Museum &amp; Stock Exchange</span>"));
+      view.appendChild(el("p", "hint", "Priceless museum artifacts trade like stocks — prices drift up but swing. Buy low, sell high. Every share you hold also permanently boosts your income."));
+      var list = el("div", "list");
+      MUSEUM.forEach(function (m) {
+        var card = el("div", "card");
+        var top = el("div", "item"); top.style.cssText = "background:transparent;border:none;padding:0";
+        top.appendChild(el("div", "icon", m.icon));
+        var body = el("div", "body");
+        body.appendChild(el("div", "name", m.name));
+        var price = el("div", "meta"); body.appendChild(price);
+        var hold = el("div", "own"); body.appendChild(hold);
+        top.appendChild(body);
+        var trend = el("div", "right"); var tEl = el("div", "cost"); trend.appendChild(tEl); top.appendChild(trend);
+        card.appendChild(top);
+
+        var btns = el("div"); btns.style.cssText = "display:flex;gap:6px;margin-top:8px;flex-wrap:wrap";
+        function mk(label, fn) { var b = el("button", "btn ghost"); b.style.flex = "1"; b.textContent = label; b.addEventListener("click", fn); return b; }
+        btns.appendChild(mk("Buy 1", function () { buyShare(m, 1); }));
+        btns.appendChild(mk("Buy 10", function () { buyShare(m, 10); }));
+        btns.appendChild(mk("Buy Max", function () { buyShare(m, -1); }));
+        btns.appendChild(mk("Sell 1", function () { sellShare(m, 1); }));
+        btns.appendChild(mk("Sell All", function () { sellShare(m, -1); }));
+        card.appendChild(btns);
+        list.appendChild(card);
+
+        var lastPrice = state.market[m.id];
+        updaters.push(function () {
+          var p = state.market[m.id];
+          price.textContent = "Price: " + fmt(p) + " 💀 · +" + Math.round(m.mult * 100) + "%/share";
+          var held = state.museum[m.id] || 0;
+          hold.textContent = "Held: " + held + " · value " + fmt(held * p);
+          var up = p >= lastPrice;
+          tEl.textContent = (up ? "▲ " : "▼ ") + fmt(p);
+          tEl.style.color = up ? "var(--good)" : "var(--bad)";
+          lastPrice = p;
+        });
+      });
+      view.appendChild(list);
+
+      var summary = el("div", "card"); summary.style.marginTop = "10px";
+      var s1 = el("div"); s1.style.cssText = "font-weight:700";
+      var s2 = el("div", "hint"); s2.style.margin = "4px 0 0";
+      summary.appendChild(s1); summary.appendChild(s2);
+      view.appendChild(summary);
+      updaters.push(function () {
+        var val = 0; MUSEUM.forEach(function (m) { val += (state.museum[m.id] || 0) * state.market[m.id]; });
+        s1.textContent = "Portfolio value: " + fmt(val) + " 💀";
+        s2.textContent = "Holding bonus: +" + Math.round((museumMult() - 1) * 100) + "% income · " + totalMuseumShares() + " shares";
+      });
+    }
+
+    /* ---------- Spin ---------- */
+    var wheelEl;
+    function buildSpin() {
+      view.appendChild(el("div", "section-title", "<span>Spin to Win</span>"));
+      var wrap = el("div", "wheel-wrap");
+      wrap.appendChild(el("div", "wheel-ptr"));
+      wheelEl = el("div", "wheel");
+      var seg = 360 / SPIN_SEGMENTS.length;
+      var stops = [];
+      SPIN_SEGMENTS.forEach(function (s, i) { stops.push(s.color + " " + (i * seg) + "deg " + ((i + 1) * seg) + "deg"); });
+      wheelEl.style.background = "conic-gradient(" + stops.join(",") + ")";
+      SPIN_SEGMENTS.forEach(function (s, i) {
+        var lab = el("div", "seg", "<span>" + s.label + "</span>");
+        // rotate the label to the center angle of its segment; keep text near the rim
+        lab.style.transform = "rotate(" + (i * seg + seg / 2) + "deg)";
+        wheelEl.appendChild(lab);
+      });
+      wrap.appendChild(wheelEl);
+      wrap.appendChild(el("div", "wheel-hub", "💀"));
+      view.appendChild(wrap);
+
+      var info = el("p", "hint", ""); view.appendChild(info);
+
+      var freeBtn = el("button", "btn gold"); freeBtn.style.width = "100%";
+      freeBtn.addEventListener("click", function () { trySpin(false); });
+      view.appendChild(freeBtn);
+
+      var payBtn = el("button", "btn ghost"); payBtn.style.cssText = "width:100%;margin-top:8px";
+      payBtn.addEventListener("click", function () { trySpin(true); });
+      view.appendChild(payBtn);
+
+      updaters.push(function () {
+        var ready = Date.now() - state.spinLast >= SPIN_COOLDOWN;
+        if (ready) { freeBtn.textContent = "🎡 FREE Spin"; freeBtn.disabled = spinning; }
+        else { freeBtn.textContent = "Free spin in " + fmtTime(SPIN_COOLDOWN - (Date.now() - state.spinLast)); freeBtn.disabled = true; }
+        var cost = spinCost();
+        payBtn.textContent = "Paid spin · " + fmt(cost) + " 💀";
+        payBtn.disabled = spinning || state.souls < cost;
+        info.textContent = "One free spin every 30 minutes. Spins done: " + state.stats.spins;
+      });
+    }
+    function spinCost() { return Math.max(500, incomePerSec() * 120 + 500); }
+    function trySpin(paid) {
+      if (spinning) return;
+      if (paid) {
+        var c = spinCost();
+        if (state.souls < c) return;
+        state.souls -= c;
+      } else {
+        if (Date.now() - state.spinLast < SPIN_COOLDOWN) return;
+        state.spinLast = Date.now();
+      }
+      spinning = true;
+      var idx = pickSegment();
+      var seg = 360 / SPIN_SEGMENTS.length;
+      var turns = 5;
+      var target = turns * 360 + (360 - (idx * seg + seg / 2)) + (Math.random() * seg * 0.6 - seg * 0.3);
+      wheelEl.style.transition = "transform 4.2s cubic-bezier(.17,.67,.16,.99)";
+      wheelEl.style.transform = "rotate(" + target + "deg)";
       save();
+      setTimeout(function () {
+        var final = target % 360;
+        wheelEl.style.transition = "none";
+        wheelEl.style.transform = "rotate(" + final + "deg)";
+        spinning = false;
+        applySpinReward(SPIN_SEGMENTS[idx]);
+      }, 4300);
     }
 
-    function clickReap(x, y) {
-      state.souls += state.perClick;
-      floaty("+" + fmt(state.perClick), x, y);
-      render();
+    /* ---------- Prestige ---------- */
+    function buildPrestige() {
+      view.appendChild(el("div", "section-title", "<span>Prestige — Cycle of Death</span>"));
+      var card = el("div", "card");
+      var p = el("p"); p.style.cssText = "color:var(--muted);font-size:13px;line-height:1.5";
+      p.innerHTML = "Reset your souls, businesses, vehicles, real estate and museum holdings in exchange for <b>prestige points</b>. " +
+        "Each point permanently boosts <b>all</b> income by +3%. Achievements, reaper coins and awards are kept.";
+      card.appendChild(p);
+      var stat = el("div"); stat.style.cssText = "margin-top:12px;font-size:15px;line-height:1.8";
+      card.appendChild(stat);
+      var btn = el("button", "btn gold"); btn.style.cssText = "width:100%;margin-top:12px";
+      btn.addEventListener("click", function () {
+        if (!canPrestige()) return;
+        if (confirm("Prestige now for " + fmt(prestigeGain()) + " points? Your souls, businesses and assets will reset.")) doPrestige();
+      });
+      card.appendChild(btn);
+      view.appendChild(card);
+      updaters.push(function () {
+        stat.innerHTML =
+          "Current prestige points: <b class='mono'>" + fmt(state.prestigePoints) + "</b><br>" +
+          "Current multiplier: <b class='mono'>×" + fmt(prestigeMult()) + "</b><br>" +
+          "Prestige now for: <b class='mono' style='color:var(--gold)'>" + fmt(prestigeGain()) + "</b> points<br>" +
+          "New multiplier would be: <b class='mono'>×" + fmt(1 + (state.prestigePoints + prestigeGain()) * 0.03) + "</b>";
+        btn.disabled = !canPrestige();
+        btn.textContent = canPrestige() ? ("☠️ Prestige for " + fmt(prestigeGain()) + " points") : "Earn more souls to prestige";
+      });
+    }
+
+    /* ---------- Achievements ---------- */
+    function buildAch() {
+      view.appendChild(el("div", "section-title", "<span>Achievements</span>"));
+      var list = el("div", "list");
+      ACHIEVEMENTS.forEach(function (a) {
+        var row = el("div", "ach");
+        row.appendChild(el("div", "icon", a.icon));
+        var body = el("div"); body.style.flex = "1";
+        body.appendChild(el("div", "name", a.name));
+        body.appendChild(el("div", "desc", a.desc));
+        var rew = a.reward.mult ? ("Reward: +" + Math.round(a.reward.mult * 100) + "% income") : ("Reward: +" + a.reward.coins + " reaper coin 💠");
+        body.appendChild(el("div", "rew", rew));
+        row.appendChild(body);
+        var chk = el("div", "chk"); row.appendChild(chk);
+        list.appendChild(row);
+        updaters.push(function () {
+          var done = !!state.ach[a.id];
+          row.classList.toggle("done", done);
+          row.classList.toggle("locked", !done);
+          chk.textContent = done ? "✅" : "🔒";
+        });
+      });
+      view.appendChild(list);
+    }
+
+    /* =========================================================
+       HUD + refresh
+       ========================================================= */
+    var hudSouls = document.getElementById("hudSouls");
+    var hudRate = document.getElementById("hudRate");
+    var hudMult = document.getElementById("hudMult");
+    function refresh() {
+      hudSouls.textContent = fmt(state.souls);
+      hudRate.textContent = fmt(incomePerSec());
+      hudMult.textContent = "×" + fmt(globalMult());
+      for (var i = 0; i < updaters.length; i++) updaters[i]();
     }
 
     function floaty(text, x, y) {
-      var f = document.createElement("div");
-      f.className = "floaty";
-      f.textContent = text;
-      f.style.left = x + "px";
-      f.style.top = y + "px";
+      var f = el("div", "floaty"); f.textContent = text;
+      f.style.left = x + "px"; f.style.top = y + "px";
       document.body.appendChild(f);
       setTimeout(function () { f.remove(); }, 900);
     }
 
-    var clicker = document.getElementById("clicker");
-    // Use pointer events so it works for mouse + touch without firing twice
-    clicker.addEventListener("pointerdown", function (e) {
-      e.preventDefault();
-      clickReap(e.clientX, e.clientY);
+    /* ---------- Toast + popup ---------- */
+    var toastEl = document.getElementById("toast"), toastTimer = null;
+    function toast(msg) {
+      toastEl.textContent = msg; toastEl.classList.add("show");
+      clearTimeout(toastTimer); toastTimer = setTimeout(function () { toastEl.classList.remove("show"); }, 2400);
+    }
+    var popup = document.getElementById("popup");
+    var popQueue = [];
+    function showPopup(icon, title, text) {
+      popQueue.push([icon, title, text]);
+      if (!popup.classList.contains("show")) nextPopup();
+    }
+    function nextPopup() {
+      if (!popQueue.length) { popup.classList.remove("show"); return; }
+      var p = popQueue.shift();
+      document.getElementById("popIcon").textContent = p[0];
+      document.getElementById("popTitle").textContent = p[1];
+      document.getElementById("popText").textContent = p[2];
+      popup.classList.add("show");
+    }
+    document.getElementById("popOk").addEventListener("click", nextPopup);
+    popup.addEventListener("click", function (e) { if (e.target === popup) nextPopup(); });
+
+    /* =========================================================
+       Save controls
+       ========================================================= */
+    document.getElementById("saveBtn").addEventListener("click", function () { save(); toast("Game saved."); });
+    document.getElementById("exportBtn").addEventListener("click", function () {
+      save();
+      var code = btoa(unescape(encodeURIComponent(localStorage.getItem(SAVE_KEY) || "")));
+      prompt("Copy your save code:", code);
+    });
+    document.getElementById("importBtn").addEventListener("click", function () {
+      var code = prompt("Paste a save code:");
+      if (!code) return;
+      try {
+        var json = decodeURIComponent(escape(atob(code.trim())));
+        JSON.parse(json);
+        localStorage.setItem(SAVE_KEY, json);
+        load(); buildTab(currentTab); refresh(); updateAchBadge();
+        toast("Save imported.");
+      } catch (e) { toast("Invalid save code."); }
+    });
+    document.getElementById("hardResetBtn").addEventListener("click", function () {
+      if (!confirm("Hard reset EVERYTHING? This wipes all progress, prestige and achievements.")) return;
+      localStorage.removeItem(SAVE_KEY);
+      state = freshState();
+      buildTab(currentTab); refresh(); updateAchBadge();
+      toast("Everything reset.");
     });
 
-    // ---- Toast ----
-    var toastEl = document.getElementById("toast");
-    var toastTimer = null;
-    function toast(msg) {
-      toastEl.textContent = msg;
-      toastEl.classList.add("show");
-      clearTimeout(toastTimer);
-      toastTimer = setTimeout(function () { toastEl.classList.remove("show"); }, 2200);
-    }
-
-    // ---- Offline / idle progress ----
+    /* =========================================================
+       Offline / idle progress
+       ========================================================= */
     function applyOffline() {
       var now = Date.now();
-      var elapsedMs = now - state.lastSeen;
-      if (elapsedMs < 5000) return; // ignore trivial gaps
-      var seconds = Math.min(elapsedMs / 1000, 60 * 60 * 24); // cap at 24h
-      var earned = soulsPerSecond() * seconds;
-      if (earned > 0) {
-        state.souls += earned;
-        toast("Welcome back — your reapers gathered " + fmt(earned) + " souls while you were away.");
-      }
+      var elapsed = now - state.lastSeen;
       state.lastSeen = now;
+      if (elapsed < 5000) return;
+      var secs = Math.min(elapsed / 1000, 60 * 60 * 24); // cap 24h
+      var steps = Math.min(60, Math.floor(secs / 60));
+      for (var i = 0; i < steps; i++) stepMarket();
+      var earned = incomePerSec() * secs;
+      if (earned > 0) { addSouls(earned); toast("Welcome back — your empire earned " + fmt(earned) + " souls while you were away."); }
     }
 
-    // ---- Controls ----
-    document.getElementById("saveBtn").addEventListener("click", function () {
-      save();
-      toast("Game saved.");
-    });
-    document.getElementById("resetBtn").addEventListener("click", function () {
-      if (!confirm("Reset all progress? This cannot be undone.")) return;
-      state.souls = 0;
-      state.perClick = 1;
-      UPGRADES.forEach(function (u) { state.owned[u.id] = 0; });
-      save();
-      render();
-      toast("Progress reset.");
-    });
-
-    // ---- Main loop ----
-    var TICK_MS = 100;
+    /* =========================================================
+       Loops
+       ========================================================= */
+    var TICK = 100;
     function tick() {
-      var sps = soulsPerSecond();
-      if (sps > 0) state.souls += sps * (TICK_MS / 1000);
-      render();
+      var inc = incomePerSec();
+      if (inc > 0) addSouls(inc * (TICK / 1000));
+      refresh();
     }
 
-    // ---- Boot ----
+    /* =========================================================
+       Boot
+       ========================================================= */
     load();
-    buildShop();
-    applyOffline();  // "becomes idle over time" — earn while away
-    render();
-    setInterval(tick, TICK_MS);
-    setInterval(save, 10000);            // autosave every 10s
+    buildTabbar();
+    switchTab("tap");
+    applyOffline();
+    checkAchievements();
+    updateAchBadge();
+    refresh();
+
+    setInterval(tick, TICK);
+    setInterval(function () { stepMarket(); if (currentTab === "market") refresh(); }, 3000);
+    setInterval(function () { if (currentTab === "spin") refresh(); }, 1000);
+    setInterval(save, 10000);
+    setInterval(checkAchievements, 1500);
     window.addEventListener("beforeunload", save);
-    document.addEventListener("visibilitychange", function () {
-      if (document.hidden) save(); else applyOffline();
-    });
+    document.addEventListener("visibilitychange", function () { if (document.hidden) save(); else { applyOffline(); refresh(); } });
   })();
   </script>
 </body>
