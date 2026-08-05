@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <!-- user-scalable=no + maximum-scale=1 stops iOS pinch/double-tap zoom -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#0b0b12" />
+  <title>Idle Death — An idle game like LARP TYCOON richman idle</title>
+  <style>
+    :root {
+      --bg: #0b0b12;
+      --bg2: #14141f;
+      --panel: #1b1b28;
+      --panel2: #23233a;
+      --accent: #8b5cf6;
+      --accent2: #22d3ee;
+      --good: #34d399;
+      --text: #e8e8f0;
+      --muted: #9a9ab0;
+      --border: #2c2c42;
+    }
+
+    * {
+      box-sizing: border-box;
+      /* Disable text selection everywhere */
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none; /* no iOS long-press callout */
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      /* touch-action: manipulation removes the 300ms + double-tap-to-zoom gesture on iOS */
+      touch-action: manipulation;
+      overscroll-behavior: none;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: radial-gradient(1200px 800px at 50% -10%, #1a1330 0%, var(--bg) 60%);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100%;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+
+    header {
+      text-align: center;
+      padding: 20px 16px 8px;
+      width: 100%;
+      max-width: 560px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 28px;
+      letter-spacing: 1px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .tagline {
+      margin: 4px 0 0;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    main {
+      width: 100%;
+      max-width: 560px;
+      padding: 0 16px 40px;
+    }
+
+    .stats {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      margin: 14px 0;
+      text-align: center;
+    }
+
+    .souls {
+      font-size: 40px;
+      font-weight: 800;
+      line-height: 1.1;
+    }
+    .souls small { font-size: 15px; color: var(--muted); font-weight: 600; }
+
+    .rate {
+      margin-top: 6px;
+      font-size: 14px;
+      color: var(--good);
+    }
+
+    .clicker-wrap {
+      display: flex;
+      justify-content: center;
+      margin: 18px 0 8px;
+    }
+
+    .clicker {
+      -webkit-appearance: none;
+      appearance: none;
+      border: none;
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      font-size: 84px;
+      cursor: pointer;
+      color: #fff;
+      background: radial-gradient(circle at 50% 35%, #2b2b45, #14141f 70%);
+      box-shadow: 0 0 0 4px var(--border), 0 12px 30px rgba(139, 92, 246, .35);
+      transition: transform .06s ease, box-shadow .2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: manipulation;
+    }
+    .clicker:active {
+      transform: scale(0.94);
+      box-shadow: 0 0 0 4px var(--accent), 0 6px 18px rgba(139, 92, 246, .5);
+    }
+
+    .hint {
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      margin: 4px 0 18px;
+    }
+
+    .section-title {
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      margin: 22px 4px 10px;
+    }
+
+    .shop { display: flex; flex-direction: column; gap: 10px; }
+
+    .item {
+      -webkit-appearance: none;
+      appearance: none;
+      text-align: left;
+      width: 100%;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 14px;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: background .15s ease, transform .06s ease, border-color .15s ease;
+      touch-action: manipulation;
+    }
+    .item:active { transform: scale(0.99); }
+    .item:not(:disabled):hover { background: var(--panel2); border-color: var(--accent); }
+    .item:disabled { opacity: .5; cursor: not-allowed; }
+
+    .item .icon { font-size: 30px; width: 40px; text-align: center; }
+    .item .body { flex: 1; min-width: 0; }
+    .item .name { font-weight: 700; font-size: 15px; }
+    .item .desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .item .owned { font-size: 12px; color: var(--accent2); margin-top: 2px; }
+    .item .cost {
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--good);
+      white-space: nowrap;
+    }
+    .item.cant .cost { color: #f87171; }
+
+    .floaty {
+      position: fixed;
+      pointer-events: none;
+      font-weight: 800;
+      font-size: 22px;
+      color: var(--accent2);
+      text-shadow: 0 2px 8px rgba(0,0,0,.6);
+      animation: rise 900ms ease-out forwards;
+      z-index: 50;
+    }
+    @keyframes rise {
+      from { opacity: 1; transform: translate(-50%, 0) scale(1); }
+      to { opacity: 0; transform: translate(-50%, -70px) scale(1.3); }
+    }
+
+    footer {
+      width: 100%;
+      max-width: 560px;
+      padding: 10px 16px 30px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .controls { display: flex; gap: 10px; justify-content: center; margin-top: 10px; }
+    .controls button {
+      -webkit-appearance: none; appearance: none;
+      background: var(--panel); color: var(--muted);
+      border: 1px solid var(--border); border-radius: 10px;
+      padding: 8px 14px; font-size: 12px; cursor: pointer;
+      touch-action: manipulation;
+    }
+    .controls button:active { transform: scale(0.97); }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--panel2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 16px;
+      border-radius: 12px;
+      font-size: 13px;
+      opacity: 0;
+      transition: opacity .25s ease, transform .25s ease;
+      z-index: 100;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>💀 Idle Death</h1>
+    <p class="tagline">An idle game like LARP TYCOON richman idle</p>
+  </header>
+
+  <main>
+    <div class="stats">
+      <div class="souls"><span id="souls">0</span> <small>souls</small></div>
+      <div class="rate"><span id="rate">0</span> souls / sec &nbsp;·&nbsp; <span id="perClick">1</span> / tap</div>
+    </div>
+
+    <div class="clicker-wrap">
+      <button class="clicker" id="clicker" aria-label="Reap souls">☠️</button>
+    </div>
+    <p class="hint">Tap the reaper to collect souls. Buy reapers to earn while you're away.</p>
+
+    <div class="section-title">Reapers &amp; Upgrades</div>
+    <div class="shop" id="shop"></div>
+  </main>
+
+  <footer>
+    <div>Progress saves automatically to this device.</div>
+    <div class="controls">
+      <button id="saveBtn">Save now</button>
+      <button id="resetBtn">Reset</button>
+    </div>
+  </footer>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+  (function () {
+    "use strict";
+
+    // ---- iOS: kill double-tap-to-zoom explicitly (belt & braces with the CSS) ----
+    var lastTouchEnd = 0;
+    document.addEventListener("touchend", function (e) {
+      var now = Date.now();
+      if (now - lastTouchEnd <= 350) {
+        e.preventDefault(); // second quick tap => cancel the zoom gesture
+      }
+      lastTouchEnd = now;
+    }, { passive: false });
+
+    // Block pinch-zoom gestures too (iOS Safari specific events)
+    ["gesturestart", "gesturechange", "gestureend"].forEach(function (t) {
+      document.addEventListener(t, function (e) { e.preventDefault(); }, { passive: false });
+    });
+
+    // Prevent selection from starting (extra guard on top of user-select:none)
+    document.addEventListener("selectstart", function (e) { e.preventDefault(); });
+
+    // ---- Game data ----
+    var SAVE_KEY = "idle-death-save-v1";
+
+    var UPGRADES = [
+      { id: "cursor",   icon: "🖐️", name: "Bony Hand",     desc: "A skeletal hand that taps for you.", baseCost: 15,     rate: 0.2 },
+      { id: "reaper",   icon: "🪦", name: "Lesser Reaper",  desc: "Harvests souls on its own.",         baseCost: 100,    rate: 1 },
+      { id: "hearse",   icon: "🚗", name: "Hearse",         desc: "Delivers souls in bulk.",            baseCost: 1100,   rate: 8 },
+      { id: "crypt",    icon: "⚰️", name: "Haunted Crypt",  desc: "A crypt that never stops filling.",  baseCost: 12000,  rate: 47 },
+      { id: "portal",   icon: "🌀", name: "Death Portal",   desc: "A gateway to the beyond.",           baseCost: 130000, rate: 260 },
+      { id: "empire",   icon: "🏰", name: "LARP Empire",    desc: "Your richman idle death empire.",    baseCost: 1400000,rate: 1400 }
+    ];
+
+    var state = {
+      souls: 0,
+      perClick: 1,
+      owned: {},          // id -> count
+      lastSeen: Date.now()
+    };
+    UPGRADES.forEach(function (u) { state.owned[u.id] = 0; });
+
+    // ---- Persistence ----
+    function save() {
+      state.lastSeen = Date.now();
+      try {
+        localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+      } catch (e) { /* storage may be unavailable */ }
+    }
+
+    function load() {
+      try {
+        var raw = localStorage.getItem(SAVE_KEY);
+        if (!raw) return;
+        var data = JSON.parse(raw);
+        state.souls = Number(data.souls) || 0;
+        state.perClick = Number(data.perClick) || 1;
+        state.lastSeen = Number(data.lastSeen) || Date.now();
+        UPGRADES.forEach(function (u) {
+          state.owned[u.id] = Number(data.owned && data.owned[u.id]) || 0;
+        });
+      } catch (e) { /* corrupt save -> fresh start */ }
+    }
+
+    // ---- Derived values ----
+    function costOf(u) {
+      // classic idle-game 1.15x cost scaling
+      return Math.ceil(u.baseCost * Math.pow(1.15, state.owned[u.id]));
+    }
+
+    function soulsPerSecond() {
+      var sps = 0;
+      UPGRADES.forEach(function (u) { sps += u.rate * state.owned[u.id]; });
+      return sps;
+    }
+
+    // ---- Formatting ----
+    var UNITS = ["", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc"];
+    function fmt(n) {
+      if (n < 1000) return (Math.floor(n * 10) / 10).toString().replace(/\.0$/, "");
+      var tier = Math.floor(Math.log10(n) / 3);
+      if (tier >= UNITS.length) tier = UNITS.length - 1;
+      var scaled = n / Math.pow(1000, tier);
+      return (Math.round(scaled * 100) / 100) + UNITS[tier];
+    }
+
+    // ---- Rendering ----
+    var elSouls = document.getElementById("souls");
+    var elRate = document.getElementById("rate");
+    var elPerClick = document.getElementById("perClick");
+    var shopEl = document.getElementById("shop");
+
+    var itemEls = {};
+    function buildShop() {
+      UPGRADES.forEach(function (u) {
+        var btn = document.createElement("button");
+        btn.className = "item";
+        btn.innerHTML =
+          '<div class="icon">' + u.icon + '</div>' +
+          '<div class="body">' +
+            '<div class="name">' + u.name + '</div>' +
+            '<div class="desc">' + u.desc + '</div>' +
+            '<div class="owned">Owned: <span data-owned></span> · +' + u.rate + '/sec each</div>' +
+          '</div>' +
+          '<div class="cost"><span data-cost></span> 💀</div>';
+        btn.addEventListener("click", function () { buy(u); });
+        shopEl.appendChild(btn);
+        itemEls[u.id] = {
+          root: btn,
+          owned: btn.querySelector("[data-owned]"),
+          cost: btn.querySelector("[data-cost]")
+        };
+      });
+    }
+
+    function render() {
+      elSouls.textContent = fmt(state.souls);
+      elRate.textContent = fmt(soulsPerSecond());
+      elPerClick.textContent = fmt(state.perClick);
+      UPGRADES.forEach(function (u) {
+        var refs = itemEls[u.id];
+        var c = costOf(u);
+        refs.owned.textContent = state.owned[u.id];
+        refs.cost.textContent = fmt(c);
+        var afford = state.souls >= c;
+        refs.root.disabled = !afford;
+        refs.root.classList.toggle("cant", !afford);
+      });
+    }
+
+    // ---- Actions ----
+    function buy(u) {
+      var c = costOf(u);
+      if (state.souls < c) return;
+      state.souls -= c;
+      state.owned[u.id] += 1;
+      render();
+      save();
+    }
+
+    function clickReap(x, y) {
+      state.souls += state.perClick;
+      floaty("+" + fmt(state.perClick), x, y);
+      render();
+    }
+
+    function floaty(text, x, y) {
+      var f = document.createElement("div");
+      f.className = "floaty";
+      f.textContent = text;
+      f.style.left = x + "px";
+      f.style.top = y + "px";
+      document.body.appendChild(f);
+      setTimeout(function () { f.remove(); }, 900);
+    }
+
+    var clicker = document.getElementById("clicker");
+    // Use pointer events so it works for mouse + touch without firing twice
+    clicker.addEventListener("pointerdown", function (e) {
+      e.preventDefault();
+      clickReap(e.clientX, e.clientY);
+    });
+
+    // ---- Toast ----
+    var toastEl = document.getElementById("toast");
+    var toastTimer = null;
+    function toast(msg) {
+      toastEl.textContent = msg;
+      toastEl.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () { toastEl.classList.remove("show"); }, 2200);
+    }
+
+    // ---- Offline / idle progress ----
+    function applyOffline() {
+      var now = Date.now();
+      var elapsedMs = now - state.lastSeen;
+      if (elapsedMs < 5000) return; // ignore trivial gaps
+      var seconds = Math.min(elapsedMs / 1000, 60 * 60 * 24); // cap at 24h
+      var earned = soulsPerSecond() * seconds;
+      if (earned > 0) {
+        state.souls += earned;
+        toast("Welcome back — your reapers gathered " + fmt(earned) + " souls while you were away.");
+      }
+      state.lastSeen = now;
+    }
+
+    // ---- Controls ----
+    document.getElementById("saveBtn").addEventListener("click", function () {
+      save();
+      toast("Game saved.");
+    });
+    document.getElementById("resetBtn").addEventListener("click", function () {
+      if (!confirm("Reset all progress? This cannot be undone.")) return;
+      state.souls = 0;
+      state.perClick = 1;
+      UPGRADES.forEach(function (u) { state.owned[u.id] = 0; });
+      save();
+      render();
+      toast("Progress reset.");
+    });
+
+    // ---- Main loop ----
+    var TICK_MS = 100;
+    function tick() {
+      var sps = soulsPerSecond();
+      if (sps > 0) state.souls += sps * (TICK_MS / 1000);
+      render();
+    }
+
+    // ---- Boot ----
+    load();
+    buildShop();
+    applyOffline();  // "becomes idle over time" — earn while away
+    render();
+    setInterval(tick, TICK_MS);
+    setInterval(save, 10000);            // autosave every 10s
+    window.addEventListener("beforeunload", save);
+    document.addEventListener("visibilitychange", function () {
+      if (document.hidden) save(); else applyOffline();
+    });
+  })();
+  </script>
+</body>
+</html>
