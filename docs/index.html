@@ -393,7 +393,7 @@
     <div class="box">
       <div class="big">☠️</div>
       <h3>Maximum souls reached</h3>
-      <p>You've amassed the maximum of 9e264 souls — the ledger of death is full. You must prestige to keep going. Your prestige points and multiplier carry over.</p>
+      <p>You've amassed the maximum of 9e264 souls — the ledger of death is full. You must prestige to keep going. Your Necro Cash and multiplier carry over.</p>
       <button class="btn gold" id="forcePrestigeBtn" style="width:100%">Prestige now</button>
     </div>
   </div>
@@ -643,7 +643,7 @@
         spinOrder: null,       // randomized order of wheel slices (keys)
         cards: {},             // suitId -> { cardIndex: true }
         buyAmt: 1,             // 1 / 10 / 100 / -1(Max)
-        stats: { clicks: 0, spins: 0, jackpots: 0, prestiges: 0, totalEarned: 0 },
+        stats: { clicks: 0, spins: 0, jackpots: 0, prestiges: 0, totalEarned: 0, runEarned: 0 },
         lastSeen: Date.now()
       };
       BUSINESSES.forEach(function (b) { s.biz[b.id] = { n: 0, up: 0 }; });
@@ -687,6 +687,8 @@
         s.lastSeen = +d.lastSeen || Date.now();
         if (d.boost) s.boost = { mult: +d.boost.mult || 1, until: +d.boost.until || 0 };
         if (d.stats) ["clicks","spins","jackpots","prestiges","totalEarned"].forEach(function (k) { s.stats[k] = +d.stats[k] || 0; });
+        // earnings since last prestige; migrate old saves to their lifetime total
+        s.stats.runEarned = (d.stats && d.stats.runEarned != null) ? (+d.stats.runEarned || 0) : (s.stats.totalEarned || 0);
         BUSINESSES.forEach(function (b) { if (d.biz && d.biz[b.id]) s.biz[b.id] = { n: +d.biz[b.id].n || 0, up: Math.min(10, +d.biz[b.id].up || 0) }; });
         if (d.assets) VEHICLES.concat(REALESTATE).forEach(function (a) { s.assets[a.id] = +d.assets[a.id] || 0; });
         MUSEUM.forEach(function (m) {
@@ -767,7 +769,7 @@
        Actions
        ========================================================= */
     function addSouls(n) {
-      if (n > 0) state.stats.totalEarned += n;
+      if (n > 0) { state.stats.totalEarned += n; state.stats.runEarned += n; }
       state.souls += n;
       if (state.souls >= SOUL_CAP) { state.souls = SOUL_CAP; triggerForcedPrestige(); }
     }
@@ -889,7 +891,9 @@
       if (fp) fp.classList.add("show");
     }
 
-    function prestigeGain() { return Math.floor(Math.sqrt(state.stats.totalEarned / 1e9)); }
+    // based on earnings SINCE the last prestige (reset on prestige), so you
+    // can't immediately prestige again for the same amount
+    function prestigeGain() { return Math.floor(Math.sqrt((state.stats.runEarned || 0) / 1e9)); }
     function canPrestige() { return prestigeGain() >= 1; }
     function doPrestige() {
       var gain = prestigeGain();
@@ -904,6 +908,7 @@
       var keepCards = state.cards;   // card collection persists
       var keepOrder = state.spinOrder;
       keepStats.prestiges += 1;
+      keepStats.runEarned = 0;   // reset earnings-since-prestige so gain resets to 0
       var fresh = freshState();
       fresh.stats = keepStats;
       fresh.ach = keepAch;
@@ -915,7 +920,7 @@
       fresh.cards = keepCards;
       fresh.spinOrder = keepOrder;
       state = fresh;
-      showPopup("☠️", "Reborn!", "You gained " + fmt(gain) + " prestige points.\nPermanent multiplier is now ×" + fmt(prestigeMult()) + ".");
+      showPopup("☠️", "Reborn!", "You gained " + fmt(gain) + " Necro Cash.\nPermanent multiplier is now ×" + fmt(prestigeMult()) + ".");
       checkAchievements();
       buildTab(currentTab); refresh(); save();
     }
@@ -1141,7 +1146,7 @@
         ["Income / sec", function () { return fmt(incomePerSec()); }],
         ["Per tap", function () { return fmt(perClick()); }],
         ["Global multiplier", function () { return "×" + fmt(globalMult()); }],
-        ["Prestige points", function () { return fmt(state.prestigePoints); }],
+        ["Necro Cash", function () { return fmt(state.prestigePoints); }],
         ["Reaper coins 💠", function () { return fmt(state.coins); }]
       ];
       cells.forEach(function (c) {
@@ -1513,26 +1518,26 @@
       view.appendChild(el("div", "section-title", "<span>Prestige — Cycle of Death</span>"));
       var card = el("div", "card");
       var p = el("p"); p.style.cssText = "color:var(--muted);font-size:13px;line-height:1.5";
-      p.innerHTML = "Reset your souls, businesses, vehicles, real estate and museum holdings in exchange for <b>prestige points</b>. " +
-        "Each point permanently boosts <b>all</b> income by +3%. Achievements, reaper coins and awards are kept.";
+      p.innerHTML = "Reset your souls, businesses, vehicles, real estate and museum holdings in exchange for <b>Necro Cash</b>. " +
+        "Each Necro Cash permanently boosts <b>all</b> income by +3%. Achievements, reaper coins and awards are kept.";
       card.appendChild(p);
       var stat = el("div"); stat.style.cssText = "margin-top:12px;font-size:15px;line-height:1.8";
       card.appendChild(stat);
       var btn = el("button", "btn gold"); btn.style.cssText = "width:100%;margin-top:12px";
       btn.addEventListener("click", function () {
         if (!canPrestige()) return;
-        confirmModal("Prestige now?", "You'll gain " + fmt(prestigeGain()) + " prestige points. Your souls, businesses and assets reset; achievements, coins, store and cards are kept.", doPrestige, "Prestige", "☠️");
+        confirmModal("Prestige now?", "You'll gain " + fmt(prestigeGain()) + " Necro Cash. Your souls, businesses and assets reset; achievements, coins, store and cards are kept.", doPrestige, "Prestige", "☠️");
       });
       card.appendChild(btn);
       view.appendChild(card);
       updaters.push(function () {
         stat.innerHTML =
-          "Current prestige points: <b class='mono'>" + fmt(state.prestigePoints) + "</b><br>" +
+          "Current Necro Cash: <b class='mono'>" + fmt(state.prestigePoints) + "</b><br>" +
           "Current multiplier: <b class='mono'>×" + fmt(prestigeMult()) + "</b><br>" +
-          "Prestige now for: <b class='mono' style='color:var(--gold)'>" + fmt(prestigeGain()) + "</b> points<br>" +
+          "Prestige now for: <b class='mono' style='color:var(--gold)'>" + fmt(prestigeGain()) + "</b> Necro Cash<br>" +
           "New multiplier would be: <b class='mono'>×" + fmt(1 + (state.prestigePoints + prestigeGain()) * 0.03) + "</b>";
         btn.disabled = !canPrestige();
-        btn.textContent = canPrestige() ? ("☠️ Prestige for " + fmt(prestigeGain()) + " points") : "Earn more souls to prestige";
+        btn.textContent = canPrestige() ? ("☠️ Prestige for " + fmt(prestigeGain()) + " Necro Cash") : "Earn more souls to prestige";
       });
     }
 
