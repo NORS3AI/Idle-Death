@@ -184,6 +184,16 @@
     }
     .amtToggle button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 
+    .catbar { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 4px 8px; }
+    .chip {
+      -webkit-appearance: none; appearance: none; cursor: pointer;
+      background: var(--panel); color: var(--muted); border: 1px solid var(--border);
+      border-radius: 999px; font-size: 12px; font-weight: 700; padding: 6px 12px; touch-action: manipulation;
+    }
+    .chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .sbar { height: 6px; background: var(--panel2); border-radius: 4px; overflow: hidden; margin-top: 8px; }
+    .sbar > span { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--gold)); }
+
     /* ---------- Clicker ---------- */
     .clicker-wrap { position: relative; display: flex; justify-content: center; margin: 10px 0 6px; }
     .boost-badge {
@@ -223,6 +233,7 @@
 
     /* ---------- Spin wheel ---------- */
     .wheel-wrap { position: relative; width: 260px; height: 260px; margin: 10px auto; }
+    .wheel-wrap.dual { width: 210px; height: 210px; margin: 6px; }
     .wheel {
       width: 100%; height: 100%; border-radius: 50%;
       border: 6px solid var(--panel2);
@@ -372,9 +383,16 @@
         <div class="set-row">
           <button class="btn ghost" data-souls="1000">+1K</button>
           <button class="btn ghost" data-souls="100000">+100K</button>
-          <button class="btn ghost" data-souls="100000000">+100M</button>
-          <button class="btn ghost" data-souls="100000000000">+100B</button>
-          <button class="btn ghost" data-souls="100000000000000">+100T</button>
+          <button class="btn ghost" data-souls="1e8">+100M</button>
+          <button class="btn ghost" data-souls="1e11">+100B</button>
+          <button class="btn ghost" data-souls="1e14">+100T</button>
+          <button class="btn ghost" data-souls="1e17">+100Qa</button>
+          <button class="btn ghost" data-souls="1e20">+100Qi</button>
+          <button class="btn ghost" data-souls="1e23">+100Sx</button>
+          <button class="btn ghost" data-souls="1e26">+100Sp</button>
+          <button class="btn ghost" data-souls="1e29">+100Oc</button>
+          <button class="btn ghost" data-souls="1e32">+100No</button>
+          <button class="btn ghost" data-souls="1e35">+100De</button>
         </div>
 
         <div class="set-row"><span class="lbl">Add reaper coins 💠</span></div>
@@ -382,6 +400,14 @@
           <button class="btn ghost" data-coins="1">+1</button>
           <button class="btn ghost" data-coins="10">+10</button>
           <button class="btn ghost" data-coins="100">+100</button>
+          <button class="btn ghost" data-coins="1000">+1K</button>
+          <button class="btn ghost" data-coins="10000">+10K</button>
+        </div>
+
+        <div class="set-row"><span class="lbl">More</span></div>
+        <div class="set-row">
+          <button class="btn ghost" id="devNecro">+100 Necro Cash</button>
+          <button class="btn ghost" id="devEverything">+100 of every business &amp; asset</button>
         </div>
       </div>
 
@@ -495,24 +521,71 @@
       { id: "tours",   icon: "👻", name: "Haunted Tours",     baseCost: 4.2e6,     costMul: 1.11, baseRev: 3400 },
       { id: "exchange",icon: "💱", name: "Soul Exchange",     baseCost: 6e7,       costMul: 1.11, baseRev: 26000 },
       { id: "resort",  icon: "🏝️", name: "Afterlife Resort",  baseCost: 9e8,       costMul: 1.11, baseRev: 210000 },
-      { id: "empire",  icon: "🏰", name: "LARP Death Empire", baseCost: 1.4e10,    costMul: 1.11, baseRev: 1.8e6 }
+      { id: "empire",  icon: "🏰", name: "LARP Death Empire", baseCost: 1.4e10,    costMul: 1.11, baseRev: 1.8e6 },
+      { id: "forge",   icon: "🌋", name: "Underworld Forge",  baseCost: 2e11,      costMul: 1.11, baseRev: 1.35e7 },
+      { id: "urn",     icon: "⚱️", name: "Urn Foundry",       baseCost: 2.8e12,    costMul: 1.11, baseRev: 1e8 },
+      { id: "seance",  icon: "🕯️", name: "Séance Halls",      baseCost: 4e13,      costMul: 1.11, baseRev: 7.6e8 },
+      { id: "plague",  icon: "🧫", name: "Plague Labs",       baseCost: 5.6e14,    costMul: 1.11, baseRev: 5.7e9 },
+      { id: "harvest", icon: "🛸", name: "Soul Harvester",    baseCost: 8e15,      costMul: 1.11, baseRev: 4.3e10 },
+      { id: "casino",  icon: "🌑", name: "Eclipse Casino",    baseCost: 1.1e17,    costMul: 1.11, baseRev: 3.2e11 },
+      { id: "shrine",  icon: "⛩️", name: "Shrine Network",    baseCost: 1.6e18,    costMul: 1.11, baseRev: 2.4e12 },
+      { id: "wyrm",    icon: "🐉", name: "Wyrm Stables",      baseCost: 2.2e19,    costMul: 1.11, baseRev: 1.8e13 },
+      { id: "purg",    icon: "🏙️", name: "Purgatory Metro",   baseCost: 3.1e20,    costMul: 1.11, baseRev: 1.35e14 },
+      { id: "astral",  icon: "🌠", name: "Astral Bank",       baseCost: 4.4e21,    costMul: 1.11, baseRev: 1e15 },
+      { id: "eternity",icon: "♾️", name: "Eternity Fund",     baseCost: 6e22,      costMul: 1.11, baseRev: 7.6e15 },
+      { id: "throne",  icon: "👑", name: "Death Throne",      baseCost: 8.5e23,    costMul: 1.11, baseRev: 5.7e16 }
     ];
     var BIZ_UP_MUL = 2;               // each upgrade doubles that business
     function bizUpCost(b, idx) { return b.baseCost * 30 * Math.pow(11, idx); }
 
     // Assets that give a permanent global income multiplier (flex / net worth).
     // mult = fractional bonus PER unit owned (e.g. 0.01 = +1%).
-    var VEHICLES = [
-      { id: "bicycle",  icon: "🚲", name: "Bicycle",        baseCost: 500,     costMul: 1.25, mult: 0.01 },
-      { id: "moto",     icon: "🏍️", name: "Motorcycle",     baseCost: 6000,    costMul: 1.25, mult: 0.02 },
-      { id: "car",      icon: "🚗", name: "Car",            baseCost: 65000,   costMul: 1.26, mult: 0.04 },
-      { id: "sports",   icon: "🏎️", name: "Sports Car",     baseCost: 800000,  costMul: 1.27, mult: 0.08 },
-      { id: "boat",     icon: "🚤", name: "Speed Boat",     baseCost: 9e6,     costMul: 1.28, mult: 0.15 },
-      { id: "yacht",    icon: "🛥️", name: "Mega Yacht",     baseCost: 1.2e8,   costMul: 1.29, mult: 0.30 },
-      { id: "heli",     icon: "🚁", name: "Helicopter",     baseCost: 1.6e9,   costMul: 1.30, mult: 0.55 },
-      { id: "jet",      icon: "🛩️", name: "Private Jet",    baseCost: 2.2e10,  costMul: 1.31, mult: 1.00 },
-      { id: "rocket",   icon: "🚀", name: "Death Rocket",   baseCost: 4e11,    costMul: 1.33, mult: 2.00 }
+    // Vehicles are grouped into categories (road / hiend / air / water / space).
+    var VEHICLE_CATS = [
+      { id: "road",  name: "Road" },
+      { id: "hiend", name: "High-End Road" },
+      { id: "air",   name: "Air" },
+      { id: "water", name: "Water" },
+      { id: "space", name: "Space" }
     ];
+    var VEHICLES = [
+      // road
+      { id: "bicycle",  cat: "road",  icon: "🚲", name: "Bicycle",        baseCost: 500,     costMul: 1.25, mult: 0.01 },
+      { id: "scooter",  cat: "road",  icon: "🛴", name: "Scooter",        baseCost: 1800,    costMul: 1.25, mult: 0.015 },
+      { id: "moto",     cat: "road",  icon: "🏍️", name: "Motorcycle",     baseCost: 6000,    costMul: 1.25, mult: 0.02 },
+      { id: "car",      cat: "road",  icon: "🚗", name: "Car",            baseCost: 65000,   costMul: 1.26, mult: 0.04 },
+      { id: "pickup",   cat: "road",  icon: "🛻", name: "Pickup Truck",   baseCost: 180000,  costMul: 1.26, mult: 0.06 },
+      { id: "taxi",     cat: "road",  icon: "🚕", name: "Taxi",           baseCost: 420000,  costMul: 1.26, mult: 0.07 },
+      { id: "van",      cat: "road",  icon: "🚐", name: "Camper Van",     baseCost: 1.1e6,   costMul: 1.27, mult: 0.09 },
+      // high-end road
+      { id: "sports",   cat: "hiend", icon: "🏎️", name: "Sports Car",     baseCost: 800000,  costMul: 1.27, mult: 0.08 },
+      { id: "suv",      cat: "hiend", icon: "🚙", name: "Luxury SUV",     baseCost: 2.4e6,   costMul: 1.27, mult: 0.12 },
+      { id: "limo",     cat: "hiend", icon: "🚘", name: "Limousine",      baseCost: 6e6,     costMul: 1.28, mult: 0.18 },
+      { id: "super",    cat: "hiend", icon: "🏎️", name: "Supercar",       baseCost: 1.8e7,   costMul: 1.28, mult: 0.26 },
+      { id: "hyper",    cat: "hiend", icon: "🏁", name: "Hypercar",       baseCost: 5e7,     costMul: 1.29, mult: 0.40 },
+      { id: "armored",  cat: "hiend", icon: "🛡️", name: "Armored Car",    baseCost: 1.4e8,   costMul: 1.29, mult: 0.60 },
+      // air
+      { id: "heli",     cat: "air",   icon: "🚁", name: "Helicopter",     baseCost: 1.6e9,   costMul: 1.30, mult: 0.55 },
+      { id: "plane",    cat: "air",   icon: "✈️", name: "Airplane",       baseCost: 6e9,     costMul: 1.30, mult: 0.80 },
+      { id: "jet",      cat: "air",   icon: "🛩️", name: "Private Jet",    baseCost: 2.2e10,  costMul: 1.31, mult: 1.00 },
+      { id: "blimp",    cat: "air",   icon: "🎈", name: "Blimp",          baseCost: 7e10,    costMul: 1.31, mult: 1.40 },
+      { id: "fighter",  cat: "air",   icon: "🛫", name: "Fighter Jet",    baseCost: 2.4e11,  costMul: 1.32, mult: 2.00 },
+      { id: "cargo",    cat: "air",   icon: "🛬", name: "Cargo Plane",    baseCost: 8e11,    costMul: 1.32, mult: 2.80 },
+      // water
+      { id: "boat",     cat: "water", icon: "🚤", name: "Speed Boat",     baseCost: 9e6,     costMul: 1.28, mult: 0.15 },
+      { id: "sail",     cat: "water", icon: "⛵", name: "Sailboat",       baseCost: 2.6e7,   costMul: 1.28, mult: 0.22 },
+      { id: "yacht",    cat: "water", icon: "🛥️", name: "Mega Yacht",     baseCost: 1.2e8,   costMul: 1.29, mult: 0.30 },
+      { id: "sub",      cat: "water", icon: "🤿", name: "Submarine",      baseCost: 5e8,     costMul: 1.30, mult: 0.50 },
+      { id: "ferry",    cat: "water", icon: "⛴️", name: "Ferry",          baseCost: 2e9,     costMul: 1.30, mult: 0.75 },
+      { id: "cruise",   cat: "water", icon: "🛳️", name: "Cruise Ship",    baseCost: 8e9,     costMul: 1.31, mult: 1.20 },
+      // space
+      { id: "rocket",   cat: "space", icon: "🚀", name: "Death Rocket",   baseCost: 4e11,    costMul: 1.33, mult: 2.00 },
+      { id: "sat",      cat: "space", icon: "🛰️", name: "Satellite",      baseCost: 1.5e12,  costMul: 1.33, mult: 3.00 },
+      { id: "ufo",      cat: "space", icon: "🛸", name: "UFO",            baseCost: 6e12,    costMul: 1.34, mult: 4.50 },
+      { id: "station",  cat: "space", icon: "🛰️", name: "Space Station",  baseCost: 2.6e13,  costMul: 1.34, mult: 7.00 },
+      { id: "shuttle",  cat: "space", icon: "🚀", name: "Mars Shuttle",   baseCost: 1.1e14,  costMul: 1.35, mult: 11.0 }
+    ];
+
     var REALESTATE = [
       { id: "apt",      icon: "🏢", name: "Apartment",       baseCost: 40000,   costMul: 1.26, mult: 0.03 },
       { id: "house",    icon: "🏠", name: "Suburban House",  baseCost: 500000,  costMul: 1.27, mult: 0.07 },
@@ -521,6 +594,48 @@
       { id: "island",   icon: "🏝️", name: "Private Island",  baseCost: 1.5e9,   costMul: 1.31, mult: 0.70 },
       { id: "city",     icon: "🌃", name: "Necropolis City", baseCost: 3e10,    costMul: 1.33, mult: 1.60 }
     ];
+    // + 40 procedurally-generated estates continuing the scaling
+    (function () {
+      var PRE = ["Crypt", "Bone", "Grave", "Tomb", "Spectral", "Phantom", "Wraith", "Shadow", "Ghoul", "Reaper",
+                 "Abyssal", "Cursed", "Hollow", "Mourning", "Ashen", "Wither", "Gloom", "Dusk", "Mortis", "Sepulcher"];
+      var SUF = ["Row", "Villa", "Estate", "Plaza", "Heights", "Tower", "Manor", "Court", "Gardens", "Keep"];
+      var ICO = ["🏚️", "🏠", "🏡", "🏘️", "🏢", "🏬", "🏰", "🏯", "🏛️", "🕍", "⛪", "🏙️"];
+      for (var i = 0; i < 40; i++) {
+        REALESTATE.push({
+          id: "re" + i,
+          icon: ICO[i % ICO.length],
+          name: PRE[i % PRE.length] + " " + SUF[Math.floor(i / 10) % SUF.length],
+          baseCost: 3e10 * Math.pow(2.4, i + 1),
+          costMul: 1.33,
+          mult: 1.6 * Math.pow(1.3, i + 1)
+        });
+      }
+    })();
+
+    // ---- Stocks: 50 tickers; price moves every 7s. Buy shares; at 1,000,000
+    // cumulative shares you OWN the company and earn its full max income. ----
+    var STOCK_OWN_TARGET = 1e6;
+    var STOCKS = (function () {
+      var A = ["Necro", "Reaper", "Soul", "Grave", "Bone", "Crypt", "Phantom", "Wraith", "Spectre", "Abyss",
+               "Mortis", "Hades", "Styx", "Void", "Ash", "Gloom", "Dusk", "Shadow", "Ghoul", "Tomb",
+               "Ether", "Pyre", "Vex", "Occult", "Rune", "Hex", "Doom", "Fang", "Coffin", "Bane"];
+      var B = ["Corp", "Inc", "Labs", "Holdings", "Systems", "Industries", "Capital", "Group", "Dynamics", "Ventures"];
+      var out = [];
+      for (var i = 0; i < 50; i++) {
+        var a = A[i % A.length], b = B[Math.floor(i / A.length) % B.length];
+        var tick = (a.substr(0, 3) + (i % 10)).toUpperCase();
+        out.push({
+          id: "stk" + i,
+          name: a + " " + b,
+          ticker: tick,
+          base: 5 * Math.pow(1.55, i),          // rising base price per stock
+          vol: 0.05 + (i % 5) * 0.01,           // per-tick volatility
+          maxEarn: 20 * Math.pow(1.62, i)       // full income/sec once owned
+        });
+      }
+      return out;
+    })();
+    var STOCK_TICK = 7000; // price update interval (ms)
 
     // Museum: priceless items traded like STOCKS. Price random-walks and drifts up.
     // Holding shares also grants a global multiplier (mult per share).
@@ -587,7 +702,8 @@
     var STORE_SPIN = [
       { id: "removeBankruptcy", name: "Close the Bankruptcy Court", icon: "🚫", desc: "Remove the 'Filed for Bankruptcy' slice from the wheel forever.", cost: 50 },
       { id: "secondJackpot",    name: "Second Jackpot",             icon: "💥", desc: "Add a second JACKPOT slice to the wheel.", cost: 100 },
-      { id: "fiveHour",         name: "5H Cash Slice",              icon: "🕔", desc: "Add a 5-hour (5H) instant-cash slice to the wheel.", cost: 500 }
+      { id: "fiveHour",         name: "5H Cash Slice",              icon: "🕔", desc: "Add a 5-hour (5H) instant-cash slice to the wheel.", cost: 500 },
+      { id: "secondSpinner",    name: "Second Spinner",             icon: "🎡", desc: "Add a second wheel beside the first that spins at a different rate at the same time — two prizes per spin.", cost: 10000 }
     ];
 
     // Achievements. reward: {mult:x} adds to a global achievement multiplier; {coins:n} grants prestige coins.
@@ -639,8 +755,11 @@
         spinLast: 0,
         freeSpins: 5,          // pool of free wheel spins
         dev: { infiniteSpins: false },
-        store: { multLevels: 0, removeBankruptcy: false, secondJackpot: false, fiveHour: false },
+        store: { multLevels: 0, removeBankruptcy: false, secondJackpot: false, fiveHour: false, secondSpinner: false },
         spinOrder: null,       // randomized order of wheel slices (keys)
+        spinOrder2: null,      // order for the second wheel
+        stocks: {},            // stockId -> { shares } (cumulative)
+        stockPrice: {},        // stockId -> current price
         cards: {},             // suitId -> { cardIndex: true }
         buyAmt: 1,             // 1 / 10 / 100 / -1(Max)
         stats: { clicks: 0, spins: 0, jackpots: 0, prestiges: 0, totalEarned: 0, runEarned: 0 },
@@ -649,6 +768,7 @@
       BUSINESSES.forEach(function (b) { s.biz[b.id] = { n: 0, up: 0 }; });
       MUSEUM.forEach(function (m) { s.market[m.id] = m.base; s.museum[m.id] = 0; });
       SUITS.forEach(function (suit) { s.cards[suit.id] = {}; });
+      STOCKS.forEach(function (stk) { s.stocks[stk.id] = { shares: 0 }; s.stockPrice[stk.id] = stk.base; });
       return s;
     }
     var state = freshState();
@@ -677,8 +797,14 @@
           s.store.removeBankruptcy = !!d.store.removeBankruptcy;
           s.store.secondJackpot = !!d.store.secondJackpot;
           s.store.fiveHour = !!d.store.fiveHour;
+          s.store.secondSpinner = !!d.store.secondSpinner;
         }
         if (Array.isArray(d.spinOrder)) s.spinOrder = d.spinOrder.slice();
+        if (Array.isArray(d.spinOrder2)) s.spinOrder2 = d.spinOrder2.slice();
+        if (d.stocks) STOCKS.forEach(function (stk) {
+          if (d.stocks[stk.id]) s.stocks[stk.id] = { shares: +d.stocks[stk.id].shares || 0 };
+          if (d.stockPrice && d.stockPrice[stk.id]) s.stockPrice[stk.id] = +d.stockPrice[stk.id] || stk.base;
+        });
         if (d.cards) SUITS.forEach(function (suit) {
           var src = d.cards[suit.id] || {}, dst = s.cards[suit.id];
           for (var i = 0; i < suit.cards.length; i++) if (src[i]) dst[i] = true;
@@ -739,7 +865,14 @@
       BUSINESSES.forEach(function (b) { r += b.baseRev * state.biz[b.id].n * bizUnitMult(b); });
       return r;
     }
-    function incomePerSec() { return baseIncomePerSec() * globalMult(); }
+    function stockShares(id) { return (state.stocks[id] && state.stocks[id].shares) || 0; }
+    // income from stocks: scales with shares up to STOCK_OWN_TARGET (full at 1M = owned)
+    function stockIncomePerSec() {
+      var r = 0;
+      STOCKS.forEach(function (stk) { r += stk.maxEarn * Math.min(1, stockShares(stk.id) / STOCK_OWN_TARGET); });
+      return r;
+    }
+    function incomePerSec() { return (baseIncomePerSec() + stockIncomePerSec()) * globalMult(); }
     function perClick() { return state.perClickBase * globalMult(); }
 
     function totalBizUnits() { var t = 0; BUSINESSES.forEach(function (b) { t += state.biz[b.id].n; }); return t; }
@@ -834,19 +967,40 @@
         state.market[m.id] = p;
       });
     }
+    // Stocks fluctuate up and down (no upward drift) every STOCK_TICK ms.
+    function stepStocks() {
+      STOCKS.forEach(function (stk) {
+        var p = state.stockPrice[stk.id] || stk.base;
+        var shock = (Math.random() - 0.5) * 2 * stk.vol;
+        p = p * (1 + shock);
+        if (p < stk.base * 0.25) p = stk.base * 0.25;
+        if (p > stk.base * 4) p = stk.base * 4;
+        state.stockPrice[stk.id] = p;
+      });
+    }
+    function buyStock(stk, qty) {
+      var price = state.stockPrice[stk.id] || stk.base;
+      var k = (qty === -1) ? Math.floor(state.souls / price) : qty;
+      if (k < 1 || state.souls < price * k) { k = Math.floor(state.souls / price); if (k < 1) return; }
+      state.souls -= price * k;
+      state.stocks[stk.id].shares = stockShares(stk.id) + k;
+      afterChange();
+    }
 
     /* =========================================================
        Spin wheel
        ========================================================= */
-    var spinSegs = SPIN_SEGMENTS.slice(); // current wheel (rebuilt from store in buildSpin)
-    function pickSegment() {
-      var total = 0; spinSegs.forEach(function (s) { total += s.weight; });
+    var spinSegs = SPIN_SEGMENTS.slice();  // wheel 1 (rebuilt from store in buildSpin)
+    var spinSegs2 = SPIN_SEGMENTS.slice(); // wheel 2 (only when second spinner owned)
+    function pickSegment(segs) {
+      var total = 0; segs.forEach(function (s) { total += s.weight; });
       var r = Math.random() * total, acc = 0;
-      for (var i = 0; i < spinSegs.length; i++) { acc += spinSegs[i].weight; if (r <= acc) return i; }
+      for (var i = 0; i < segs.length; i++) { acc += segs[i].weight; if (r <= acc) return i; }
       return 0;
     }
     var spinning = false;
-    function applySpinReward(seg) {
+    // Apply one slice's effect and return a summary (no popup / no spin count).
+    function resolveReward(seg) {
       var msg, icon = "🎡";
       if (seg.kind === "nothing") { msg = "Bust — better luck next spin!"; }
       else if (seg.kind === "income") {
@@ -872,12 +1026,23 @@
         state.assets[pick.id] = (state.assets[pick.id] || 0) + 1;
         msg = "Won a free " + pick.name + " " + pick.icon + "!";
       }
-      var ok = seg.kind === "nothing" ? "Darnit!"
-             : seg.kind === "loss" ? "Well, that sucks!"
-             : niceLabel();
-      state.stats.spins++;
+      return { icon: icon, label: seg.label, msg: msg, kind: seg.kind, jackpot: !!seg.jackpot };
+    }
+    // Show one combined popup for however many wheels spun.
+    function finishSpins(results) {
+      results.forEach(function () { state.stats.spins++; });
       checkAchievements();
-      showPopup(icon, "You spun: " + seg.label, msg, ok);
+      if (results.length === 1) {
+        var r = results[0];
+        var ok = r.kind === "nothing" ? "Darnit!" : r.kind === "loss" ? "Well, that sucks!" : niceLabel();
+        showPopup(r.icon, "You spun: " + r.label, r.msg, ok);
+      } else {
+        var body = results.map(function (x, i) { return "Wheel " + (i + 1) + " — " + x.label + "\n" + x.msg; }).join("\n\n");
+        var allBad = results.every(function (x) { return x.kind === "nothing" || x.kind === "loss"; });
+        var ok = allBad ? "Darnit!" : niceLabel();
+        var icon = results.some(function (x) { return x.jackpot; }) ? "💥" : "🎡";
+        showPopup(icon, "Double spin!", body, ok);
+      }
       refresh(); save();
     }
 
@@ -907,6 +1072,7 @@
       var keepStore = state.store;   // coin-bought upgrades persist
       var keepCards = state.cards;   // card collection persists
       var keepOrder = state.spinOrder;
+      var keepOrder2 = state.spinOrder2;
       keepStats.prestiges += 1;
       keepStats.runEarned = 0;   // reset earnings-since-prestige so gain resets to 0
       var fresh = freshState();
@@ -919,6 +1085,7 @@
       fresh.store = keepStore;
       fresh.cards = keepCards;
       fresh.spinOrder = keepOrder;
+      fresh.spinOrder2 = keepOrder2;
       state = fresh;
       showPopup("☠️", "Reborn!", "You gained " + fmt(gain) + " Necro Cash.\nPermanent multiplier is now ×" + fmt(prestigeMult()) + ".");
       checkAchievements();
@@ -943,21 +1110,22 @@
       toast(u.name + " purchased!");
       afterChange();
     }
-    // Wheel segments after applying store purchases.
-    function activeSegments() {
+    // Wheel segments after applying store purchases, ordered by the given order key.
+    function activeSegments(orderKey) {
       var segs = SPIN_SEGMENTS.filter(function (s) { return !(state.store.removeBankruptcy && s.kind === "loss"); }).slice();
       if (state.store.secondJackpot) segs.push({ key: "jack2", label: "JACKPOT", short: "JACKPOT", color: "#f97316", weight: 5, kind: "income", secs: 7200, jackpot: true });
       if (state.store.fiveHour) segs.push({ key: "c5h", label: "5H instant cash", short: "5H", color: "#a855f7", weight: 5, kind: "income", secs: 18000 });
-      return orderSegments(segs);
+      return orderSegments(segs, orderKey || "spinOrder");
     }
-    function initSpinOrder() { state.spinOrder = shuffled(ALL_SEG_KEYS); }
-    // arrange the active segments according to the stored (randomized) order
-    function orderSegments(segs) {
+    function initSpinOrder() { state.spinOrder = shuffled(ALL_SEG_KEYS); state.spinOrder2 = shuffled(ALL_SEG_KEYS); }
+    // arrange the active segments according to a stored (randomized) order
+    function orderSegments(segs, orderKey) {
       if (!state.spinOrder || !state.spinOrder.length) initSpinOrder();
+      var order = state[orderKey] || state.spinOrder;
       var byKey = {};
       segs.forEach(function (s) { byKey[s.key] = s; });
       var result = [];
-      state.spinOrder.forEach(function (k) { if (byKey[k]) { result.push(byKey[k]); delete byKey[k]; } });
+      order.forEach(function (k) { if (byKey[k]) { result.push(byKey[k]); delete byKey[k]; } });
       Object.keys(byKey).forEach(function (k) { result.push(byKey[k]); }); // any new keys not yet in order
       return result;
     }
@@ -1043,6 +1211,7 @@
       { id: "assets",  ic: "🏎️", label: "Assets" },
       { id: "estate",  ic: "🏰", label: "Estate" },
       { id: "market",  ic: "📈", label: "Museum" },
+      { id: "stocks",  ic: "📊", label: "Stocks" },
       { id: "spin",    ic: "🎡", label: "Spin" },
       { id: "store",   ic: "🛒", label: "Store" },
       { id: "prestige",ic: "☠️", label: "Prestige" },
@@ -1098,6 +1267,7 @@
       else if (id === "assets") buildAssets();
       else if (id === "estate") buildEstate();
       else if (id === "market") buildMarket();
+      else if (id === "stocks") buildStocks();
       else if (id === "spin") buildSpin();
       else if (id === "store") buildStore();
       else if (id === "prestige") buildPrestige();
@@ -1219,13 +1389,7 @@
     }
 
     /* ---------- Assets (vehicles + real estate) ---------- */
-    function buildAssetList(title, subtitle, arr) {
-      var head = el("div", "section-title");
-      head.appendChild(el("span", null, title));
-      head.appendChild(amountToggle());
-      view.appendChild(head);
-      view.appendChild(el("p", "hint", subtitle));
-      var list = el("div", "list");
+    function renderAssetItems(list, arr) {
       arr.forEach(function (a) {
         var it = el("button", "item");
         it.appendChild(el("div", "icon", a.icon));
@@ -1250,10 +1414,79 @@
           it.classList.toggle("cant", state.souls < c);
         });
       });
+    }
+    function buildAssetList(title, subtitle, arr) {
+      var head = el("div", "section-title");
+      head.appendChild(el("span", null, title));
+      head.appendChild(amountToggle());
+      view.appendChild(head);
+      view.appendChild(el("p", "hint", subtitle));
+      var list = el("div", "list");
+      renderAssetItems(list, arr);
       view.appendChild(list);
     }
-    function buildAssets() { buildAssetList("Vehicles", "Cars, motorcycles, bicycles, boats, yachts, helicopters and more — each is a permanent income multiplier.", VEHICLES); }
+    var assetCat = "road";
+    function buildAssets() {
+      var head = el("div", "section-title");
+      head.appendChild(el("span", null, "Vehicles"));
+      head.appendChild(amountToggle());
+      view.appendChild(head);
+      var chips = el("div", "catbar");
+      VEHICLE_CATS.forEach(function (c) {
+        var b = el("button", "chip" + (assetCat === c.id ? " active" : ""));
+        b.textContent = c.name;
+        b.addEventListener("click", function () { assetCat = c.id; buildTab("assets"); refresh(); });
+        chips.appendChild(b);
+      });
+      view.appendChild(chips);
+      view.appendChild(el("p", "hint", "Every vehicle is a permanent global income multiplier."));
+      var list = el("div", "list");
+      renderAssetItems(list, VEHICLES.filter(function (v) { return v.cat === assetCat; }));
+      view.appendChild(list);
+    }
     function buildEstate() { buildAssetList("Real Estate", "Property empire — every holding permanently multiplies all of your income.", REALESTATE); }
+
+    /* ---------- Stocks ---------- */
+    function buildStocks() {
+      view.appendChild(el("div", "section-title", "<span>Stock Exchange · 50 tickers</span>"));
+      view.appendChild(el("p", "hint", "Prices swing up and down every 7 seconds. Buy shares — once you hold 1,000,000 shares you OWN the company and earn its full income. Partial holdings earn a proportional share."));
+      var list = el("div", "list");
+      STOCKS.forEach(function (stk) {
+        var card = el("div", "card");
+        var top = el("div", "item"); top.style.cssText = "background:transparent;border:none;padding:0";
+        var body = el("div", "body");
+        body.appendChild(el("div", "name", stk.ticker + " · " + stk.name));
+        var price = el("div", "meta"); body.appendChild(price);
+        var hold = el("div", "own"); body.appendChild(hold);
+        top.appendChild(body);
+        var trend = el("div", "right"); var tEl = el("div", "cost"); trend.appendChild(tEl); top.appendChild(trend);
+        card.appendChild(top);
+        var bar = el("div", "sbar"); var barIn = el("span"); bar.appendChild(barIn); card.appendChild(bar);
+        var btns = el("div"); btns.style.cssText = "display:flex;gap:6px;margin-top:8px;flex-wrap:wrap";
+        function mk(label, fn) { var b = el("button", "btn ghost"); b.style.flex = "1"; b.textContent = label; b.addEventListener("click", fn); return b; }
+        btns.appendChild(mk("1K", function () { buyStock(stk, 1000); }));
+        btns.appendChild(mk("100K", function () { buyStock(stk, 100000); }));
+        btns.appendChild(mk("1M", function () { buyStock(stk, 1000000); }));
+        btns.appendChild(mk("Max", function () { buyStock(stk, -1); }));
+        card.appendChild(btns);
+        list.appendChild(card);
+        var last = state.stockPrice[stk.id] || stk.base;
+        updaters.push(function () {
+          var p = state.stockPrice[stk.id] || stk.base;
+          var sh = stockShares(stk.id);
+          var owned = sh >= STOCK_OWN_TARGET;
+          price.textContent = "Price " + fmt(p) + " 💀 · earns " + fmt(stk.maxEarn * Math.min(1, sh / STOCK_OWN_TARGET) * globalMult()) + "/sec";
+          hold.textContent = (owned ? "OWNED · " : "") + "Shares: " + fmt(sh) + " / 1M";
+          hold.style.color = owned ? "var(--gold)" : "var(--muted)";
+          barIn.style.width = Math.min(100, sh / STOCK_OWN_TARGET * 100) + "%";
+          var up = p >= last;
+          tEl.textContent = (up ? "▲ " : "▼ ") + fmt(p);
+          tEl.style.color = up ? "var(--good)" : "var(--bad)";
+          last = p;
+        });
+      });
+      view.appendChild(list);
+    }
 
     /* ---------- Market / Museum (stocks) ---------- */
     function buildMarket() {
@@ -1309,26 +1542,35 @@
     }
 
     /* ---------- Spin ---------- */
-    var wheelEl;
-    function buildSpin() {
-      view.appendChild(el("div", "section-title", "<span>Spin to Win</span>"));
-      var wrap = el("div", "wheel-wrap");
+    var wheelEl, wheelEl2;
+    function buildWheel(segs, dual) {
+      var wrap = el("div", "wheel-wrap" + (dual ? " dual" : ""));
       wrap.appendChild(el("div", "wheel-ptr"));
-      wheelEl = el("div", "wheel");
-      spinSegs = activeSegments();               // rebuild wheel from store purchases
-      var seg = 360 / spinSegs.length;
+      var w = el("div", "wheel");
+      var seg = 360 / segs.length;
       var stops = [];
-      spinSegs.forEach(function (s, i) { stops.push(s.color + " " + (i * seg) + "deg " + ((i + 1) * seg) + "deg"); });
-      wheelEl.style.background = "conic-gradient(" + stops.join(",") + ")";
-      spinSegs.forEach(function (s, i) {
+      segs.forEach(function (s, i) { stops.push(s.color + " " + (i * seg) + "deg " + ((i + 1) * seg) + "deg"); });
+      w.style.background = "conic-gradient(" + stops.join(",") + ")";
+      segs.forEach(function (s, i) {
         var lab = el("div", "seg", "<span>" + (s.short || s.label) + "</span>");
-        // rotate the label to the center angle of its segment; keep text near the rim
         lab.style.transform = "rotate(" + (i * seg + seg / 2) + "deg)";
-        wheelEl.appendChild(lab);
+        w.appendChild(lab);
       });
-      wrap.appendChild(wheelEl);
+      wrap.appendChild(w);
       wrap.appendChild(el("div", "wheel-hub", "💀"));
-      view.appendChild(wrap);
+      return { wrap: wrap, wheel: w };
+    }
+    function buildSpin() {
+      var two = state.store.secondSpinner;
+      view.appendChild(el("div", "section-title", "<span>Spin to Win" + (two ? " · Double" : "") + "</span>"));
+      spinSegs = activeSegments("spinOrder");
+      var row = el("div"); row.style.cssText = "display:flex;justify-content:center;gap:10px;flex-wrap:wrap";
+      var w1 = buildWheel(spinSegs, two); wheelEl = w1.wheel; row.appendChild(w1.wrap);
+      if (two) {
+        spinSegs2 = activeSegments("spinOrder2");
+        var w2 = buildWheel(spinSegs2, two); wheelEl2 = w2.wheel; row.appendChild(w2.wrap);
+      }
+      view.appendChild(row);
 
       var info = el("p", "hint", ""); view.appendChild(info);
 
@@ -1351,11 +1593,19 @@
         var cost = spinCost();
         payBtn.textContent = "Paid spin · " + fmt(cost) + " 💀";
         payBtn.disabled = spinning || state.souls < cost;
-        info.textContent = "Free spins left: " + (state.dev.infiniteSpins ? "∞" : state.freeSpins) +
+        info.textContent = (two ? "Both wheels spin at once for two prizes. " : "") +
+          "Free spins left: " + (state.dev.infiniteSpins ? "∞" : state.freeSpins) +
           " · then a free spin every 30 min · Spins done: " + state.stats.spins;
       });
     }
     function spinCost() { return Math.max(500, incomePerSec() * 120 + 500); }
+    function animateWheel(wEl, segCount, idx, durMs) {
+      var seg = 360 / segCount;
+      var target = 5 * 360 + (360 - (idx * seg + seg / 2)) + (Math.random() * seg * 0.6 - seg * 0.3);
+      wEl.style.transition = "transform " + (durMs / 1000) + "s cubic-bezier(.17,.67,.16,.99)";
+      wEl.style.transform = "rotate(" + target + "deg)";
+      setTimeout(function () { wEl.style.transition = "none"; wEl.style.transform = "rotate(" + (target % 360) + "deg)"; }, durMs + 40);
+    }
     function trySpin(paid) {
       if (spinning) return;
       if (paid) {
@@ -1374,20 +1624,21 @@
         }
       }
       spinning = true;
-      var idx = pickSegment();
-      var seg = 360 / spinSegs.length;
-      var turns = 5;
-      var target = turns * 360 + (360 - (idx * seg + seg / 2)) + (Math.random() * seg * 0.6 - seg * 0.3);
-      wheelEl.style.transition = "transform 4.2s cubic-bezier(.17,.67,.16,.99)";
-      wheelEl.style.transform = "rotate(" + target + "deg)";
+      var two = state.store.secondSpinner && wheelEl2;
+      var results = [];
+      var pending = two ? 2 : 1;
+      function done(seg) { results.push(resolveReward(seg)); if (--pending === 0) { spinning = false; finishSpins(results); } }
+
+      var idx1 = pickSegment(spinSegs);
+      animateWheel(wheelEl, spinSegs.length, idx1, 4200);
+      setTimeout(function () { done(spinSegs[idx1]); }, two ? 5700 : 4300); // wait for both when dual
+
+      if (two) {
+        var idx2 = pickSegment(spinSegs2);
+        animateWheel(wheelEl2, spinSegs2.length, idx2, 5600); // different rate
+        setTimeout(function () { done(spinSegs2[idx2]); }, 5700);
+      }
       save();
-      setTimeout(function () {
-        var final = target % 360;
-        wheelEl.style.transition = "none";
-        wheelEl.style.transform = "rotate(" + final + "deg)";
-        spinning = false;
-        applySpinReward(spinSegs[idx]);
-      }, 4300);
     }
 
     /* ---------- Store ---------- */
@@ -1733,8 +1984,17 @@
       b.addEventListener("click", function () {
         var n = +b.getAttribute("data-coins");
         state.coins += n; checkAchievements(); refresh(); save();
-        toast("+" + n + " reaper coins");
+        toast("+" + fmt(n) + " reaper coins");
       });
+    });
+    document.getElementById("devNecro").addEventListener("click", function () {
+      state.prestigePoints += 100; checkAchievements(); refresh(); save(); toast("+100 Necro Cash");
+    });
+    document.getElementById("devEverything").addEventListener("click", function () {
+      BUSINESSES.forEach(function (b) { state.biz[b.id].n += 100; });
+      VEHICLES.concat(REALESTATE).forEach(function (a) { state.assets[a.id] = (state.assets[a.id] || 0) + 100; });
+      checkAchievements(); buildTab(currentTab); refresh(); save();
+      toast("+100 of every business & asset");
     });
 
     /* =========================================================
@@ -1747,7 +2007,7 @@
       if (elapsed < 5000) return;
       var secs = Math.min(elapsed / 1000, 60 * 60 * 24); // cap 24h
       var steps = Math.min(60, Math.floor(secs / 60));
-      for (var i = 0; i < steps; i++) stepMarket();
+      for (var i = 0; i < steps; i++) { stepMarket(); stepStocks(); }
       var earned = incomePerSec() * secs;
       if (earned > 0) { addSouls(earned); toast("Welcome back — your empire earned " + fmt(earned) + " souls while you were away."); }
     }
@@ -1775,6 +2035,7 @@
 
     setInterval(tick, TICK);
     setInterval(function () { stepMarket(); if (currentTab === "market") refresh(); }, 3000);
+    setInterval(function () { stepStocks(); if (currentTab === "stocks") refresh(); }, STOCK_TICK);
     setInterval(function () { if (currentTab === "spin") refresh(); }, 1000);
     setInterval(save, 10000);
     setInterval(checkAchievements, 1500);
