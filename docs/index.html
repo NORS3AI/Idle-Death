@@ -476,14 +476,18 @@
 
     // Spin wheel segments (weighted).
     var SPIN_SEGMENTS = [
-      { label: "Bust",     color: "#3b3b52", weight: 14, kind: "nothing" },
-      { label: "60s cash", color: "#34d399", weight: 22, kind: "income", secs: 60 },
-      { label: "x2 60s",   color: "#22d3ee", weight: 14, kind: "boost", mult: 2, secs: 60 },
-      { label: "5m cash",  color: "#8b5cf6", weight: 16, kind: "income", secs: 300 },
-      { label: "Free Car", color: "#fbbf24", weight: 10, kind: "vehicle" },
-      { label: "x3 45s",   color: "#2dd4bf", weight: 10, kind: "boost", mult: 3, secs: 45 },
-      { label: "+1 coin",  color: "#f472b6", weight: 8,  kind: "coin" },
-      { label: "JACKPOT",  color: "#f59e0b", weight: 6,  kind: "income", secs: 3600 }
+      { label: "Bust",             short: "Bust",     color: "#3b3b52", weight: 14, kind: "nothing" },
+      { label: "60s cash",         short: "60s",      color: "#34d399", weight: 20, kind: "income", secs: 60 },
+      { label: "x2 income 60s",    short: "x2",       color: "#22d3ee", weight: 12, kind: "boost", mult: 2, secs: 60 },
+      { label: "5m cash",          short: "5m",       color: "#8b5cf6", weight: 14, kind: "income", secs: 300 },
+      { label: "Free Car",         short: "🚗",       color: "#fbbf24", weight: 9,  kind: "vehicle" },
+      { label: "x3 income 45s",    short: "x3",       color: "#2dd4bf", weight: 8,  kind: "boost", mult: 3, secs: 45 },
+      { label: "+1 reaper coin",   short: "💠",       color: "#f472b6", weight: 7,  kind: "coin" },
+      { label: "10m instant cash", short: "10m",      color: "#38bdf8", weight: 9,  kind: "income", secs: 600 },
+      { label: "30m instant cash", short: "30m",      color: "#818cf8", weight: 6,  kind: "income", secs: 1800 },
+      { label: "60m instant cash", short: "60m",      color: "#c084fc", weight: 4,  kind: "income", secs: 3600 },
+      { label: "Filed for Bankruptcy", short: "Bankrupt", color: "#ef4444", weight: 10, kind: "loss", amount: 50000 },
+      { label: "JACKPOT",          short: "JACKPOT",  color: "#f59e0b", weight: 5,  kind: "income", secs: 7200, jackpot: true }
     ];
     var SPIN_COOLDOWN = 30 * 60 * 1000; // 30 min free spin
 
@@ -708,13 +712,19 @@
     }
     var spinning = false;
     function applySpinReward(seg) {
-      var msg;
+      var msg, icon = "🎡";
       if (seg.kind === "nothing") { msg = "Bust — better luck next spin!"; }
       else if (seg.kind === "income") {
         var amt = Math.max(incomePerSec() * seg.secs, perClick() * 25 + 50);
         addSouls(amt);
-        if (seg.secs >= 3600) { state.stats.jackpots++; msg = "JACKPOT! +" + fmt(amt) + " souls"; }
-        else msg = "+" + fmt(amt) + " souls (" + seg.secs + "s of income)";
+        if (seg.jackpot) { state.stats.jackpots++; icon = "💥"; msg = "JACKPOT! +" + fmt(amt) + " souls"; }
+        else msg = "+" + fmt(amt) + " souls (" + fmtTime(seg.secs * 1000) + " of income)";
+      }
+      else if (seg.kind === "loss") {
+        var take = Math.min(seg.amount, state.souls);
+        state.souls -= take;
+        icon = "💸";
+        msg = "Filed for bankruptcy — lost " + fmt(take) + " souls.";
       }
       else if (seg.kind === "boost") {
         state.boost = { mult: seg.mult, until: Date.now() + seg.secs * 1000 };
@@ -729,7 +739,7 @@
       }
       state.stats.spins++;
       checkAchievements();
-      showPopup("🎡", "You spun: " + seg.label, msg);
+      showPopup(icon, "You spun: " + seg.label, msg);
       refresh(); save();
     }
 
@@ -1044,7 +1054,7 @@
       SPIN_SEGMENTS.forEach(function (s, i) { stops.push(s.color + " " + (i * seg) + "deg " + ((i + 1) * seg) + "deg"); });
       wheelEl.style.background = "conic-gradient(" + stops.join(",") + ")";
       SPIN_SEGMENTS.forEach(function (s, i) {
-        var lab = el("div", "seg", "<span>" + s.label + "</span>");
+        var lab = el("div", "seg", "<span>" + (s.short || s.label) + "</span>");
         // rotate the label to the center angle of its segment; keep text near the rim
         lab.style.transform = "rotate(" + (i * seg + seg / 2) + "deg)";
         wheelEl.appendChild(lab);
