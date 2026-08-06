@@ -52,16 +52,36 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      min-height: 100%;
-      padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+      /* Lock the app to the viewport so it fits one screen; content scrolls inside */
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
     }
 
-    .wrap { width: 100%; max-width: 620px; padding: 0 12px 120px; }
+    /* App shell: header + HUD pinned, #view scrolls internally, tab bar pinned */
+    .app {
+      width: 100%;
+      max-width: 860px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      padding-top: env(safe-area-inset-top);
+      padding-left: max(12px, env(safe-area-inset-left));
+      padding-right: max(12px, env(safe-area-inset-right));
+    }
+
+    #view {
+      flex: 1 1 auto;
+      min-height: 0;                 /* allow the flex child to actually shrink & scroll */
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 12px;
+    }
 
     /* ---------- Header ---------- */
-    header { text-align: center; padding: 16px 4px 6px; }
+    header { text-align: center; padding: 10px 40px 4px; flex: 0 0 auto; }
     h1 {
-      margin: 0; font-size: 26px; letter-spacing: 1px;
+      margin: 0; font-size: 24px; letter-spacing: 1px;
       background: linear-gradient(90deg, var(--accent), var(--accent2));
       -webkit-background-clip: text; background-clip: text;
       -webkit-text-fill-color: transparent;
@@ -69,9 +89,10 @@
     .tagline { margin: 3px 0 0; font-size: 12px; color: var(--muted); }
 
     .hud {
+      flex: 0 0 auto;
       display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
       background: var(--panel); border: 1px solid var(--border);
-      border-radius: 14px; padding: 12px; margin: 12px 0;
+      border-radius: 14px; padding: 10px; margin: 8px 0;
     }
     .hud .cell { text-align: center; }
     .hud .k { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
@@ -82,14 +103,15 @@
 
     /* ---------- Tabs ---------- */
     .tabbar {
-      position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+      flex: 0 0 auto;
       display: flex; justify-content: center;
       background: rgba(11,11,18,.92);
       backdrop-filter: blur(8px);
       border-top: 1px solid var(--border);
-      padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+      padding: 6px 0 calc(6px + env(safe-area-inset-bottom));
+      margin: 0 calc(-1 * max(12px, env(safe-area-inset-left))) 0 calc(-1 * max(12px, env(safe-area-inset-right)));
     }
-    .tabbar .inner { display: flex; gap: 2px; width: 100%; max-width: 620px; overflow-x: auto; }
+    .tabbar .inner { display: flex; gap: 2px; width: 100%; max-width: 860px; overflow-x: auto; padding: 0 8px; }
     .tabbar button {
       -webkit-appearance: none; appearance: none;
       position: relative; flex: 1 0 auto; min-width: 58px;
@@ -112,6 +134,10 @@
       color: var(--muted); margin: 18px 4px 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px;
     }
     .list { display: flex; flex-direction: column; gap: 8px; }
+    /* On wide screens (iPad) show purchase lists in two columns to fit more */
+    @media (min-width: 700px) {
+      .list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: start; }
+    }
 
     .card {
       background: var(--panel); border: 1px solid var(--border);
@@ -159,16 +185,17 @@
     .amtToggle button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 
     /* ---------- Clicker ---------- */
-    .clicker-wrap { display: flex; justify-content: center; margin: 14px 0 6px; }
+    .clicker-wrap { display: flex; justify-content: center; margin: 10px 0 6px; }
     .clicker {
       -webkit-appearance: none; appearance: none; border: none;
-      width: 170px; height: 170px; border-radius: 50%; font-size: 78px; cursor: pointer; color: #fff;
-      background: radial-gradient(circle at 50% 35%, #2b2b45, #14141f 70%);
-      box-shadow: 0 0 0 4px var(--border), 0 12px 30px rgba(139,92,246,.35);
+      width: min(360px, 88%); height: 128px; border-radius: 30px;
+      font-size: 62px; cursor: pointer; color: #fff;
+      background: radial-gradient(120% 160% at 50% 30%, #2b2b45, #14141f 72%);
+      box-shadow: 0 0 0 3px var(--border), 0 12px 30px rgba(139,92,246,.35);
       transition: transform .06s, box-shadow .2s;
       display: flex; align-items: center; justify-content: center; touch-action: manipulation;
     }
-    .clicker:active { transform: scale(0.93); box-shadow: 0 0 0 4px var(--accent), 0 6px 18px rgba(139,92,246,.5); }
+    .clicker:active { transform: scale(0.97); box-shadow: 0 0 0 3px var(--accent), 0 6px 18px rgba(139,92,246,.5); }
     .hint { text-align: center; color: var(--muted); font-size: 12px; margin: 4px 0 8px; line-height: 1.5; }
 
     .floaty {
@@ -274,7 +301,7 @@
   </style>
 </head>
 <body>
-  <div class="wrap">
+  <div class="app">
     <header>
       <h1>💀 Idle Death</h1>
     </header>
@@ -287,18 +314,10 @@
 
     <div id="view"></div>
 
-    <div class="foot">
-      Progress saves automatically to this device ·
-      <a href="https://nors3ai.github.io/Idle-Death/">nors3ai.github.io/Idle-Death</a>
-      <div class="rowbtns">
-        <button class="btn ghost" id="openSettingsBtn">⚙️ Settings</button>
-      </div>
-    </div>
+    <div class="tabbar"><div class="inner" id="tabbar"></div></div>
   </div>
 
   <button class="gear" id="gearBtn" aria-label="Settings">⚙️</button>
-
-  <div class="tabbar"><div class="inner" id="tabbar"></div></div>
 
   <div class="toast" id="toast"></div>
 
@@ -1229,7 +1248,8 @@
     }
     function closeSettings() { settingsEl.classList.remove("show"); }
     document.getElementById("gearBtn").addEventListener("click", openSettings);
-    document.getElementById("openSettingsBtn").addEventListener("click", openSettings);
+    var openSettingsBtn = document.getElementById("openSettingsBtn");
+    if (openSettingsBtn) openSettingsBtn.addEventListener("click", openSettings);
     document.getElementById("settingsClose").addEventListener("click", closeSettings);
     settingsEl.addEventListener("click", function (e) { if (e.target === settingsEl) closeSettings(); });
 
