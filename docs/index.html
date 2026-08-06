@@ -333,6 +333,7 @@
     .set-row .btn { flex: 1; }
     .switch { justify-content: space-between; cursor: pointer; }
     input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent); }
+    input[type="range"] { width: 100%; accent-color: var(--accent); height: 24px; }
     /* allow selecting/copy-paste inside the save-code box (global rule disables selection) */
     textarea { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
   </style>
@@ -418,8 +419,14 @@
 
         <div class="set-row"><span class="lbl">More</span></div>
         <div class="set-row">
-          <button class="btn ghost" id="devNecro">+100 Nekro Cash</button>
-          <button class="btn ghost" id="devTiers">+100 of each money tier</button>
+          <button class="btn ghost" id="devNecro" style="flex:1">+100 Nekro Cash</button>
+        </div>
+        <div class="set-row"><span class="lbl">Give souls: <b id="devSoulAmt">0</b></span></div>
+        <div class="set-row">
+          <input type="range" id="devSoulSlider" min="0" max="1000" value="150" />
+        </div>
+        <div class="set-row">
+          <button class="btn ghost" id="devSoulGive" style="flex:1">Give souls</button>
         </div>
       </div>
 
@@ -987,6 +994,32 @@
       afterChange();
     }
 
+    // Max-all: buy as many as affordable of each item, in list order.
+    function maxAllBiz() {
+      BUSINESSES.forEach(function (b) {
+        var owned = state.biz[b.id].n;
+        var k = maxAffordable(b.baseCost, b.costMul, owned, state.souls);
+        if (k > 0) { state.souls -= bulkCost(b.baseCost, b.costMul, owned, k); state.biz[b.id].n = owned + k; }
+      });
+      afterChange();
+    }
+    function maxAllAssets(arr) {
+      arr.forEach(function (a) {
+        var owned = state.assets[a.id] || 0;
+        var k = maxAffordable(a.baseCost, a.costMul, owned, state.souls);
+        if (k > 0) { state.souls -= bulkCost(a.baseCost, a.costMul, owned, k); state.assets[a.id] = owned + k; }
+      });
+      afterChange();
+    }
+    function maxAllMuseum() {
+      MUSEUM.forEach(function (m) {
+        var price = state.market[m.id];
+        var k = Math.floor(state.souls / price);
+        if (k > 0) { state.souls -= price * k; state.museum[m.id] = (state.museum[m.id] || 0) + k; }
+      });
+      afterChange();
+    }
+
     function afterChange() { checkAchievements(); refresh(); save(); }
 
     /* =========================================================
@@ -1259,6 +1292,12 @@
        UI helpers
        ========================================================= */
     function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
+    function maxAllBtn(label, fn) {
+      var b = el("button", "btn ghost"); b.style.cssText = "width:100%;margin-bottom:8px";
+      b.textContent = "⏫ " + label;
+      b.addEventListener("click", fn);
+      return b;
+    }
 
     var TABS = [
       { id: "tap",     ic: "💀", label: "Reap" },
@@ -1392,6 +1431,7 @@
       head.appendChild(el("span", null, "Businesses · 10 upgrades each"));
       head.appendChild(amountToggle());
       view.appendChild(head);
+      view.appendChild(maxAllBtn("Max all businesses", maxAllBiz));
 
       var list = el("div", "list");
       BUSINESSES.forEach(function (b) {
@@ -1476,11 +1516,13 @@
       head.appendChild(amountToggle());
       view.appendChild(head);
       view.appendChild(el("p", "hint", subtitle));
+      view.appendChild(maxAllBtn("Max all", function () { maxAllAssets(arr); }));
       var list = el("div", "list");
       renderAssetItems(list, arr);
       view.appendChild(list);
     }
     var assetCat = "road";
+    var suiteCollapsed = {};  // suitId -> player collapse preference (undefined = auto)
     function buildAssets() {
       var head = el("div", "section-title");
       head.appendChild(el("span", null, "Vehicles"));
@@ -1495,8 +1537,10 @@
       });
       view.appendChild(chips);
       view.appendChild(el("p", "hint", "Every vehicle is a permanent global income multiplier."));
+      var catArr = VEHICLES.filter(function (v) { return v.cat === assetCat; });
+      view.appendChild(maxAllBtn("Max all in this tab", function () { maxAllAssets(catArr); }));
       var list = el("div", "list");
-      renderAssetItems(list, VEHICLES.filter(function (v) { return v.cat === assetCat; }));
+      renderAssetItems(list, catArr);
       view.appendChild(list);
     }
     function buildEstate() { buildAssetList("Real Estate", "Property empire — every holding permanently multiplies all of your income.", REALESTATE); }
@@ -1547,6 +1591,7 @@
     function buildMarket() {
       view.appendChild(el("div", "section-title", "<span>Museum &amp; Stock Exchange</span>"));
       view.appendChild(el("p", "hint", "Priceless museum artifacts trade like stocks — prices drift up but swing. Buy low, sell high. Every share you hold also permanently boosts your income."));
+      view.appendChild(maxAllBtn("Max all shares", maxAllMuseum));
       var list = el("div", "list");
       MUSEUM.forEach(function (m) {
         var card = el("div", "card");
@@ -1781,12 +1826,13 @@
       var col = el("div", "list");
       SUITS.forEach(function (suit) {
         var card = el("div", "card"); card.style.borderColor = suit.color;
-        var head = el("div"); head.style.cssText = "display:flex;align-items:center;gap:10px";
+        var head = el("div"); head.style.cssText = "display:flex;align-items:center;gap:10px;cursor:pointer";
         var ic = el("div", null, suit.icon); ic.style.fontSize = "26px"; head.appendChild(ic);
         var hb = el("div"); hb.style.flex = "1";
         hb.appendChild(el("div", "name", suit.name + " Suite"));
         var prog = el("div", "meta"); hb.appendChild(prog);
         head.appendChild(hb);
+        var caret = el("div"); caret.style.cssText = "font-size:16px;color:var(--muted);width:18px;text-align:center"; head.appendChild(caret);
         card.appendChild(head);
         var grid = el("div"); grid.style.cssText = "display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px";
         var cellEls = [];
@@ -1800,6 +1846,13 @@
         });
         card.appendChild(grid);
         col.appendChild(card);
+
+        // Collapse: completed suites default collapsed; header toggles any suite.
+        var collapsed = (suiteCollapsed[suit.id] !== undefined) ? suiteCollapsed[suit.id] : suitComplete(suit);
+        function applyCollapse() { grid.style.display = collapsed ? "none" : "grid"; caret.textContent = collapsed ? "▸" : "▾"; }
+        applyCollapse();
+        head.addEventListener("click", function () { collapsed = !collapsed; suiteCollapsed[suit.id] = collapsed; applyCollapse(); });
+
         updaters.push(function () {
           var owned = state.cards[suit.id] || {};
           var cnt = 0;
@@ -1814,6 +1867,8 @@
           var done = cnt >= suit.cards.length;
           prog.textContent = cnt + "/" + suit.cards.length + " · set ×" + suit.setMult + (done ? " COMPLETE" : "");
           prog.style.color = done ? "var(--gold)" : "var(--muted)";
+          // auto-collapse the moment a suite completes (until the player chooses otherwise)
+          if (done && suiteCollapsed[suit.id] === undefined && !collapsed) { collapsed = true; applyCollapse(); }
         });
       });
       view.appendChild(col);
@@ -2074,11 +2129,20 @@
     document.getElementById("devNecro").addEventListener("click", function () {
       state.prestigePoints += 100; checkAchievements(); refresh(); save(); toast("+100 Nekro Cash");
     });
-    document.getElementById("devTiers").addEventListener("click", function () {
-      var total = 0;
-      for (var e = 3; e <= 45; e += 3) total += 100 * Math.pow(10, e); // 100 of each tier: K, M, B, T, Qa, ... QaDc
-      addSouls(total); checkAchievements(); refresh(); save();
-      toast("+100 of each money tier");
+    // Dev souls slider: log scale up to the soul cap
+    var devSoulSlider = document.getElementById("devSoulSlider");
+    var devSoulAmtEl = document.getElementById("devSoulAmt");
+    function devSoulAmount() {
+      var expo = (+devSoulSlider.value / 1000) * 308;   // 10^0 .. 10^308 (near the JS/soul-cap max)
+      return Math.min(SOUL_CAP, Math.pow(10, expo));
+    }
+    function updateDevSoulAmt() { devSoulAmtEl.textContent = fmt(devSoulAmount()); }
+    devSoulSlider.addEventListener("input", updateDevSoulAmt);
+    updateDevSoulAmt();
+    document.getElementById("devSoulGive").addEventListener("click", function () {
+      var amt = devSoulAmount();
+      addSouls(amt); checkAchievements(); refresh(); save();
+      toast("+" + fmt(amt) + " souls");
     });
 
     /* =========================================================
