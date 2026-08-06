@@ -322,7 +322,13 @@
       touch-action: manipulation;
     }
     .gear:active { transform: scale(0.94); }
-    .settings-box { text-align: left; max-width: 400px; max-height: 82vh; overflow-y: auto; border-color: var(--border) !important; }
+    .settings-box {
+      text-align: left; max-width: 400px; width: 100%;
+      max-height: 82vh; max-height: 82dvh;
+      overflow-y: auto; -webkit-overflow-scrolling: touch;   /* momentum scroll on iOS */
+      overscroll-behavior: contain; touch-action: pan-y;     /* allow vertical drag-scroll inside the fixed overlay */
+      border-color: var(--border) !important;
+    }
     .settings-box h3 { text-align: center; margin: 0 0 6px; }
     .set-sec { margin-top: 14px; }
     .set-sec > .h { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 8px; }
