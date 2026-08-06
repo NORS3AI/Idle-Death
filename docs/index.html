@@ -249,6 +249,28 @@
     .foot { text-align: center; color: var(--muted); font-size: 11px; margin-top: 22px; }
     .foot a { color: var(--accent2); }
     .rowbtns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
+
+    /* ---------- Settings / Dev menu ---------- */
+    .gear {
+      position: fixed; top: calc(env(safe-area-inset-top) + 10px); right: 12px; z-index: 45;
+      -webkit-appearance: none; appearance: none; cursor: pointer;
+      width: 40px; height: 40px; border-radius: 50%;
+      background: var(--panel); border: 1px solid var(--border); color: var(--text);
+      font-size: 20px; display: flex; align-items: center; justify-content: center;
+      touch-action: manipulation;
+    }
+    .gear:active { transform: scale(0.94); }
+    .settings-box { text-align: left; max-width: 400px; max-height: 82vh; overflow-y: auto; border-color: var(--border) !important; }
+    .settings-box h3 { text-align: center; margin: 0 0 6px; }
+    .set-sec { margin-top: 14px; }
+    .set-sec > .h { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 8px; }
+    .set-sec.dev { border: 1px solid var(--border); border-radius: 12px; padding: 12px; background: rgba(248,113,113,.06); }
+    .set-sec.dev > .h { color: var(--bad); }
+    .set-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+    .set-row .lbl { font-size: 13px; flex: 1; min-width: 90px; color: var(--text); }
+    .set-row .btn { flex: 1; }
+    .switch { justify-content: space-between; cursor: pointer; }
+    input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent); }
   </style>
 </head>
 <body>
@@ -269,13 +291,12 @@
       Progress saves automatically to this device ·
       <a href="https://nors3ai.github.io/Idle-Death/">nors3ai.github.io/Idle-Death</a>
       <div class="rowbtns">
-        <button class="btn ghost" id="saveBtn">Save</button>
-        <button class="btn ghost" id="exportBtn">Export</button>
-        <button class="btn ghost" id="importBtn">Import</button>
-        <button class="btn danger" id="hardResetBtn">Hard reset</button>
+        <button class="btn ghost" id="openSettingsBtn">⚙️ Settings</button>
       </div>
     </div>
   </div>
+
+  <button class="gear" id="gearBtn" aria-label="Settings">⚙️</button>
 
   <div class="tabbar"><div class="inner" id="tabbar"></div></div>
 
@@ -287,6 +308,49 @@
       <h3 id="popTitle">Title</h3>
       <p id="popText">Text</p>
       <button class="btn gold" id="popOk" style="width:100%">Nice!</button>
+    </div>
+  </div>
+
+  <div class="popup" id="settings">
+    <div class="box settings-box">
+      <h3>⚙️ Settings</h3>
+
+      <div class="set-sec">
+        <div class="h">Save data</div>
+        <div class="set-row">
+          <button class="btn ghost" id="saveBtn">Save</button>
+          <button class="btn ghost" id="exportBtn">Export</button>
+          <button class="btn ghost" id="importBtn">Import</button>
+        </div>
+        <div class="set-row">
+          <button class="btn danger" id="hardResetBtn" style="flex:1">Hard reset</button>
+        </div>
+      </div>
+
+      <div class="set-sec dev">
+        <div class="h">🛠️ Developer menu</div>
+
+        <label class="set-row switch">
+          <span class="lbl">Infinite spins</span>
+          <input type="checkbox" id="devInfSpins" />
+        </label>
+
+        <div class="set-row"><span class="lbl">Add souls</span></div>
+        <div class="set-row">
+          <button class="btn ghost" data-souls="100">+100</button>
+          <button class="btn ghost" data-souls="1000">+1K</button>
+          <button class="btn ghost" data-souls="10000">+10K</button>
+        </div>
+
+        <div class="set-row"><span class="lbl">Add reaper coins 💠</span></div>
+        <div class="set-row">
+          <button class="btn ghost" data-coins="1">+1</button>
+          <button class="btn ghost" data-coins="10">+10</button>
+          <button class="btn ghost" data-coins="100">+100</button>
+        </div>
+      </div>
+
+      <button class="btn gold" id="settingsClose" style="width:100%;margin-top:16px">Close</button>
     </div>
   </div>
 
@@ -448,6 +512,8 @@
         ach: {},               // id -> true
         boost: { mult: 1, until: 0 },
         spinLast: 0,
+        freeSpins: 5,          // pool of free wheel spins
+        dev: { infiniteSpins: false },
         buyAmt: 1,             // 1 / 10 / 100 / -1(Max)
         stats: { clicks: 0, spins: 0, jackpots: 0, prestiges: 0, totalEarned: 0 },
         lastSeen: Date.now()
@@ -475,6 +541,8 @@
         s.prestigePoints = +d.prestigePoints || 0;
         s.perClickBase = +d.perClickBase || 1;
         s.spinLast = +d.spinLast || 0;
+        s.freeSpins = (d.freeSpins == null) ? 5 : (+d.freeSpins || 0); // grant 5 to existing saves
+        if (d.dev) s.dev.infiniteSpins = !!d.dev.infiniteSpins;
         s.buyAmt = d.buyAmt || 1;
         s.lastSeen = +d.lastSeen || Date.now();
         if (d.boost) s.boost = { mult: +d.boost.mult || 1, until: +d.boost.until || 0 };
@@ -659,6 +727,7 @@
       var keepCoins = state.coins;
       var keepPP = state.prestigePoints + gain;
       var keepAmt = state.buyAmt;
+      var keepDev = state.dev;
       keepStats.prestiges += 1;
       var fresh = freshState();
       fresh.stats = keepStats;
@@ -666,6 +735,7 @@
       fresh.coins = keepCoins;
       fresh.prestigePoints = keepPP;
       fresh.buyAmt = keepAmt;
+      fresh.dev = keepDev;
       state = fresh;
       showPopup("☠️", "Reborn!", "You gained " + fmt(gain) + " prestige points.\nPermanent multiplier is now ×" + fmt(prestigeMult()) + ".");
       checkAchievements();
@@ -975,13 +1045,18 @@
       view.appendChild(payBtn);
 
       updaters.push(function () {
-        var ready = Date.now() - state.spinLast >= SPIN_COOLDOWN;
-        if (ready) { freeBtn.textContent = "🎡 FREE Spin"; freeBtn.disabled = spinning; }
-        else { freeBtn.textContent = "Free spin in " + fmtTime(SPIN_COOLDOWN - (Date.now() - state.spinLast)); freeBtn.disabled = true; }
+        var cd = Date.now() - state.spinLast >= SPIN_COOLDOWN;
+        var canFree = state.dev.infiniteSpins || state.freeSpins > 0 || cd;
+        if (state.dev.infiniteSpins) freeBtn.textContent = "🎡 FREE Spin (∞)";
+        else if (state.freeSpins > 0) freeBtn.textContent = "🎡 FREE Spin (" + state.freeSpins + " left)";
+        else if (cd) freeBtn.textContent = "🎡 FREE Spin";
+        else freeBtn.textContent = "Free spin in " + fmtTime(SPIN_COOLDOWN - (Date.now() - state.spinLast));
+        freeBtn.disabled = spinning || !canFree;
         var cost = spinCost();
         payBtn.textContent = "Paid spin · " + fmt(cost) + " 💀";
         payBtn.disabled = spinning || state.souls < cost;
-        info.textContent = "One free spin every 30 minutes. Spins done: " + state.stats.spins;
+        info.textContent = "Free spins left: " + (state.dev.infiniteSpins ? "∞" : state.freeSpins) +
+          " · then a free spin every 30 min · Spins done: " + state.stats.spins;
       });
     }
     function spinCost() { return Math.max(500, incomePerSec() * 120 + 500); }
@@ -992,8 +1067,15 @@
         if (state.souls < c) return;
         state.souls -= c;
       } else {
-        if (Date.now() - state.spinLast < SPIN_COOLDOWN) return;
-        state.spinLast = Date.now();
+        if (state.dev.infiniteSpins) {
+          /* dev: free, consume nothing */
+        } else if (state.freeSpins > 0) {
+          state.freeSpins -= 1;      // use a free spin from the pool
+        } else if (Date.now() - state.spinLast >= SPIN_COOLDOWN) {
+          state.spinLast = Date.now();
+        } else {
+          return;
+        }
       }
       spinning = true;
       var idx = pickSegment();
@@ -1132,8 +1214,43 @@
       if (!confirm("Hard reset EVERYTHING? This wipes all progress, prestige and achievements.")) return;
       localStorage.removeItem(SAVE_KEY);
       state = freshState();
+      closeSettings();
       buildTab(currentTab); refresh(); updateAchBadge();
       toast("Everything reset.");
+    });
+
+    /* =========================================================
+       Settings + Developer menu
+       ========================================================= */
+    var settingsEl = document.getElementById("settings");
+    function openSettings() {
+      document.getElementById("devInfSpins").checked = !!state.dev.infiniteSpins;
+      settingsEl.classList.add("show");
+    }
+    function closeSettings() { settingsEl.classList.remove("show"); }
+    document.getElementById("gearBtn").addEventListener("click", openSettings);
+    document.getElementById("openSettingsBtn").addEventListener("click", openSettings);
+    document.getElementById("settingsClose").addEventListener("click", closeSettings);
+    settingsEl.addEventListener("click", function (e) { if (e.target === settingsEl) closeSettings(); });
+
+    document.getElementById("devInfSpins").addEventListener("change", function (e) {
+      state.dev.infiniteSpins = e.target.checked;
+      toast(e.target.checked ? "Infinite spins ON" : "Infinite spins OFF");
+      refresh(); save();
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-souls]"), function (b) {
+      b.addEventListener("click", function () {
+        var n = +b.getAttribute("data-souls");
+        addSouls(n); checkAchievements(); refresh(); save();
+        toast("+" + fmt(n) + " souls");
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-coins]"), function (b) {
+      b.addEventListener("click", function () {
+        var n = +b.getAttribute("data-coins");
+        state.coins += n; checkAchievements(); refresh(); save();
+        toast("+" + n + " reaper coins");
+      });
     });
 
     /* =========================================================
