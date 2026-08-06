@@ -737,9 +737,12 @@
         state.assets[pick.id] = (state.assets[pick.id] || 0) + 1;
         msg = "Won a free " + pick.name + " " + pick.icon + "!";
       }
+      var ok = seg.kind === "nothing" ? "Darnit!"
+             : seg.kind === "loss" ? "Well, that sucks!"
+             : niceLabel();
       state.stats.spins++;
       checkAchievements();
-      showPopup(icon, "You spun: " + seg.label, msg);
+      showPopup(icon, "You spun: " + seg.label, msg, ok);
       refresh(); save();
     }
 
@@ -1204,8 +1207,12 @@
     }
     var popup = document.getElementById("popup");
     var popQueue = [];
-    function showPopup(icon, title, text) {
-      popQueue.push([icon, title, text]);
+    // Positive confirm-button phrases; one is picked at random unless a
+    // specific label is passed to showPopup (e.g. for bad outcomes).
+    var NICE = ["Nice", "Yes!", "Alrighty", "Good Job", "Okay", "That's nice"];
+    function niceLabel() { return NICE[Math.floor(Math.random() * NICE.length)]; }
+    function showPopup(icon, title, text, okLabel) {
+      popQueue.push([icon, title, text, okLabel]);
       if (!popup.classList.contains("show")) nextPopup();
     }
     function nextPopup() {
@@ -1214,6 +1221,7 @@
       document.getElementById("popIcon").textContent = p[0];
       document.getElementById("popTitle").textContent = p[1];
       document.getElementById("popText").textContent = p[2];
+      document.getElementById("popOk").textContent = p[3] || niceLabel();
       popup.classList.add("show");
     }
     document.getElementById("popOk").addEventListener("click", nextPopup);
