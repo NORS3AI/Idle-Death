@@ -729,8 +729,10 @@
     var SUIT_WEIGHTS = { undead: 40, vampire: 25, witch: 18, void: 10, psy: 6 }; // necromancer is a fixed 1% roll
     var NECRO_CHANCE = 0.01;
     var CHESTS = [
-      { id: "bone",  name: "Bone Chest",  icon: "🎁", cost: 10, cards: 1 },
-      { id: "crypt", name: "Crypt Chest", icon: "⚰️", cost: 45, cards: 5 }
+      { id: "bone",  name: "Bone Chest",  icon: "🎁", cost: 10,  cards: 1 },
+      { id: "crypt", name: "Crypt Chest", icon: "⚰️", cost: 45,  cards: 5 },
+      { id: "tomb",  name: "Tomb Chest",  icon: "🪦", cost: 100, cards: 15 },
+      { id: "vault", name: "Vault Chest", icon: "🏛️", cost: 250, cards: 40 }
     ];
     // one-time coin store upgrades that modify the spin wheel
     var STORE_SPIN = [
@@ -1230,10 +1232,15 @@
       return true;
     }
     function completeSuitIds() { return SUITS.filter(suitComplete).map(function (s) { return s.id; }); }
+    // Necromancer drop chance rises once every other suite is complete.
+    function necroChance() {
+      var others = SUITS.filter(function (s) { return s.id !== "necromancer"; });
+      return others.every(suitComplete) ? 0.10 : NECRO_CHANCE;
+    }
     function drawCard() {
       var suit;
-      if (Math.random() < NECRO_CHANCE) {
-        suit = SUITS[SUITS.length - 1]; // necromancer (1%)
+      if (Math.random() < necroChance()) {
+        suit = SUITS[SUITS.length - 1]; // necromancer
       } else {
         var pool = SUITS.filter(function (s) { return s.id !== "necromancer"; });
         var total = 0; pool.forEach(function (s) { total += (SUIT_WEIGHTS[s.id] || 1); });
@@ -1805,14 +1812,14 @@
 
       // chests
       view.appendChild(el("div", "section-title", "<span>Card Chests</span>"));
-      view.appendChild(el("p", "hint", "Open chests for cards across six dead-themed suites. Each card grants its own income bonus; collect all 6 of a suite for a huge multiplier. Necromancer cards have a 1% drop chance per card."));
+      view.appendChild(el("p", "hint", "Open chests for cards across six dead-themed suites. Each card grants its own income bonus; collect all 6 of a suite for a huge multiplier."));
       var clist = el("div", "list");
       CHESTS.forEach(function (ch) {
         var it = el("button", "item");
         it.appendChild(el("div", "icon", ch.icon));
         var body = el("div", "body");
         body.appendChild(el("div", "name", ch.name));
-        body.appendChild(el("div", "desc", ch.cards + (ch.cards > 1 ? " cards" : " card") + " per open · 1% Necromancer chance"));
+        body.appendChild(el("div", "desc", ch.cards + (ch.cards > 1 ? " cards" : " card") + " per open"));
         it.appendChild(body);
         var right = el("div", "right"); var cost = el("div", "cost"); right.appendChild(cost); it.appendChild(right);
         it.addEventListener("click", function () { buyChest(ch); });
