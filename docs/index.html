@@ -296,6 +296,18 @@
     .popup h3 { margin: 8px 0 6px; }
     .popup p { color: var(--muted); font-size: 13px; margin: 4px 0 16px; white-space: pre-line; }
 
+    .wipe-row { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 6px; }
+    .wipe-btns { display: flex; gap: 10px; }
+    .wipe-btns .btn { min-width: 78px; }
+    .skelly { font-size: 42px; display: inline-block; transform-origin: 50% 90%; animation: dance 0.7s ease-in-out infinite; }
+    .skelly:last-child { animation-delay: 0.35s; }
+    @keyframes dance {
+      0%, 100% { transform: translateY(0) rotate(-14deg); }
+      25% { transform: translateY(-9px) rotate(10deg); }
+      50% { transform: translateY(0) rotate(14deg); }
+      75% { transform: translateY(-9px) rotate(-10deg); }
+    }
+
     .foot { text-align: center; color: var(--muted); font-size: 11px; margin-top: 22px; }
     .foot a { color: var(--accent2); }
     .rowbtns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
@@ -367,7 +379,7 @@
           <button class="btn ghost" id="importBtn">Import</button>
         </div>
         <div class="set-row">
-          <button class="btn danger" id="hardResetBtn" style="flex:1">Hard reset</button>
+          <button class="btn danger" id="wipeBtn" style="flex:1">🧹 Wipe &amp; restart game</button>
         </div>
       </div>
 
@@ -406,8 +418,8 @@
 
         <div class="set-row"><span class="lbl">More</span></div>
         <div class="set-row">
-          <button class="btn ghost" id="devNecro">+100 Necro Cash</button>
-          <button class="btn ghost" id="devEverything">+100 of every business &amp; asset</button>
+          <button class="btn ghost" id="devNecro">+100 Nekro Cash</button>
+          <button class="btn ghost" id="devTiers">+100 of each money tier</button>
         </div>
       </div>
 
@@ -419,7 +431,7 @@
     <div class="box">
       <div class="big">☠️</div>
       <h3>Maximum souls reached</h3>
-      <p>You've amassed the maximum of 9e264 souls — the ledger of death is full. You must prestige to keep going. Your Necro Cash and multiplier carry over.</p>
+      <p>You've amassed the maximum of 9e1000000000000000 souls — the ledger of death is full. You must prestige to keep going. Your Nekro Cash and multiplier carry over.</p>
       <button class="btn gold" id="forcePrestigeBtn" style="width:100%">Prestige now</button>
     </div>
   </div>
@@ -444,6 +456,21 @@
       <div class="set-row" style="margin-top:10px">
         <button class="btn gold" id="saveAction" style="flex:1">Copy</button>
         <button class="btn ghost" id="saveCancel" style="flex:1">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="popup" id="wipePop">
+    <div class="box">
+      <h3>Are you sure?</h3>
+      <p>This permanently deletes ALL progress and restarts the whole game from zero. This cannot be undone.</p>
+      <div class="wipe-row">
+        <span class="skelly">💀</span>
+        <div class="wipe-btns">
+          <button class="btn danger" id="wipeYes">Yes</button>
+          <button class="btn gold" id="wipeNo">No</button>
+        </div>
+        <span class="skelly">💀</span>
       </div>
     </div>
   </div>
@@ -737,14 +764,16 @@
     /* =========================================================
        State
        ========================================================= */
-    var SOUL_CAP = 9e264;    // hard souls ceiling; reaching it forces a prestige
+    var SOUL_CAP = 9e1000000000000000;    // hard souls ceiling; reaching it forces a prestige
     var forcedActive = false;
 
     function freshState() {
       var s = {
         souls: 0,
         coins: 0,              // prestige currency ("reaper coins")
-        prestigePoints: 0,     // permanent prestige multiplier source
+        prestigePoints: 0,     // spendable Nekro Cash balance
+        nekroLifetime: 0,      // total Nekro Cash ever earned (drives the passive multiplier)
+        nekro: { void: 0, grip: 0, offline: 0 }, // Nekro Cash shop upgrade levels
         perClickBase: 1,
         biz: {},               // id -> {n, up}
         assets: {},            // id -> count (vehicles + realestate)
@@ -788,6 +817,9 @@
         s.souls = +d.souls || 0;
         s.coins = +d.coins || 0;
         s.prestigePoints = +d.prestigePoints || 0;
+        // old saves: lifetime = current balance (nothing spent yet)
+        s.nekroLifetime = (d.nekroLifetime != null) ? (+d.nekroLifetime || 0) : s.prestigePoints;
+        if (d.nekro) { s.nekro.void = +d.nekro.void || 0; s.nekro.grip = +d.nekro.grip || 0; s.nekro.offline = +d.nekro.offline || 0; }
         s.perClickBase = +d.perClickBase || 1;
         s.spinLast = +d.spinLast || 0;
         s.freeSpins = (d.freeSpins == null) ? 5 : (+d.freeSpins || 0); // grant 5 to existing saves
@@ -844,7 +876,10 @@
       MUSEUM.forEach(function (mu) { m += (state.museum[mu.id] || 0) * mu.mult; });
       return m;
     }
-    function prestigeMult() { return 1 + state.prestigePoints * 0.03; }
+    // passive multiplier from LIFETIME Nekro Cash (spending the balance won't reduce it)
+    function prestigeMult() { return 1 + (state.nekroLifetime || 0) * 0.03; }
+    function nekroMult() { return Math.pow(1.6, (state.nekro && state.nekro.void) || 0); }        // Void Engine
+    function nekroClickMult() { return Math.pow(3, (state.nekro && state.nekro.grip) || 0); }      // Skeletal Grip
     function boostMult() { return (state.boost.until > Date.now()) ? state.boost.mult : 1; }
     function storeMult() { return 1 + (state.store.multLevels || 0) * 0.5; }
     function cardsMult() {
@@ -857,7 +892,7 @@
       });
       return (1 + add) * setF;
     }
-    function globalMult() { return prestigeMult() * achMult() * assetMult() * museumMult() * storeMult() * cardsMult() * boostMult(); }
+    function globalMult() { return prestigeMult() * nekroMult() * achMult() * assetMult() * museumMult() * storeMult() * cardsMult() * boostMult(); }
 
     function bizUnitMult(b) { return Math.pow(BIZ_UP_MUL, state.biz[b.id].up); }
     function baseIncomePerSec() {
@@ -873,7 +908,7 @@
       return r;
     }
     function incomePerSec() { return (baseIncomePerSec() + stockIncomePerSec()) * globalMult(); }
-    function perClick() { return state.perClickBase * globalMult(); }
+    function perClick() { return state.perClickBase * globalMult() * nekroClickMult(); }
 
     function totalBizUnits() { var t = 0; BUSINESSES.forEach(function (b) { t += state.biz[b.id].n; }); return t; }
     function totalMuseumShares() { var t = 0; MUSEUM.forEach(function (m) { t += (state.museum[m.id] || 0); }); return t; }
@@ -1058,7 +1093,8 @@
 
     // based on earnings SINCE the last prestige (reset on prestige), so you
     // can't immediately prestige again for the same amount
-    function prestigeGain() { return Math.floor(Math.sqrt((state.stats.runEarned || 0) / 1e9)); }
+    // Nekro Cash is now much harder to earn (divisor 1e15 instead of 1e9).
+    function prestigeGain() { return Math.floor(Math.sqrt((state.stats.runEarned || 0) / 1e15)); }
     function canPrestige() { return prestigeGain() >= 1; }
     function doPrestige() {
       var gain = prestigeGain();
@@ -1067,6 +1103,8 @@
       var keepAch = state.ach;
       var keepCoins = state.coins;
       var keepPP = state.prestigePoints + gain;
+      var keepLife = (state.nekroLifetime || 0) + gain;   // lifetime drives the passive multiplier
+      var keepNekro = state.nekro;
       var keepAmt = state.buyAmt;
       var keepDev = state.dev;
       var keepStore = state.store;   // coin-bought upgrades persist
@@ -1080,6 +1118,8 @@
       fresh.ach = keepAch;
       fresh.coins = keepCoins;
       fresh.prestigePoints = keepPP;
+      fresh.nekroLifetime = keepLife;
+      fresh.nekro = keepNekro;
       fresh.buyAmt = keepAmt;
       fresh.dev = keepDev;
       fresh.store = keepStore;
@@ -1087,9 +1127,24 @@
       fresh.spinOrder = keepOrder;
       fresh.spinOrder2 = keepOrder2;
       state = fresh;
-      showPopup("☠️", "Reborn!", "You gained " + fmt(gain) + " Necro Cash.\nPermanent multiplier is now ×" + fmt(prestigeMult()) + ".");
+      showPopup("☠️", "Reborn!", "You gained " + fmt(gain) + " Nekro Cash.\nPermanent multiplier is now ×" + fmt(prestigeMult()) + ".");
       checkAchievements();
       buildTab(currentTab); refresh(); save();
+    }
+
+    /* ---- Nekro Cash shop (spend the prestige currency) ---- */
+    var NEKRO_UPGRADES = [
+      { key: "void",    icon: "🌀", name: "Void Engine",    desc: "×1.6 global income per level.", baseCost: 2, mul: 1.6 },
+      { key: "grip",    icon: "💀", name: "Skeletal Grip",  desc: "×3 souls per tap per level.",   baseCost: 1, mul: 3 },
+      { key: "offline", icon: "⚰️", name: "Grave Robber",   desc: "+50% offline earnings per level.", baseCost: 3, mul: 1 }
+    ];
+    function nekroCost(u) { return Math.ceil(u.baseCost * Math.pow(2, (state.nekro[u.key] || 0))); }
+    function buyNekro(u) {
+      var c = nekroCost(u);
+      if (state.prestigePoints < c) return;
+      state.prestigePoints -= c;
+      state.nekro[u.key] = (state.nekro[u.key] || 0) + 1;
+      afterChange();
     }
 
     /* =========================================================
@@ -1316,7 +1371,7 @@
         ["Income / sec", function () { return fmt(incomePerSec()); }],
         ["Per tap", function () { return fmt(perClick()); }],
         ["Global multiplier", function () { return "×" + fmt(globalMult()); }],
-        ["Necro Cash", function () { return fmt(state.prestigePoints); }],
+        ["Nekro Cash", function () { return fmt(state.prestigePoints); }],
         ["Reaper coins 💠", function () { return fmt(state.coins); }]
       ];
       cells.forEach(function (c) {
@@ -1769,27 +1824,52 @@
       view.appendChild(el("div", "section-title", "<span>Prestige — Cycle of Death</span>"));
       var card = el("div", "card");
       var p = el("p"); p.style.cssText = "color:var(--muted);font-size:13px;line-height:1.5";
-      p.innerHTML = "Reset your souls, businesses, vehicles, real estate and museum holdings in exchange for <b>Necro Cash</b>. " +
-        "Each Necro Cash permanently boosts <b>all</b> income by +3%. Achievements, reaper coins and awards are kept.";
+      p.innerHTML = "Reset your souls, businesses, vehicles, real estate and museum holdings in exchange for <b>Nekro Cash</b>. " +
+        "Every Nekro Cash you've ever earned permanently boosts <b>all</b> income by +3%. Spend your balance below. Achievements, reaper coins and awards are kept.";
       card.appendChild(p);
       var stat = el("div"); stat.style.cssText = "margin-top:12px;font-size:15px;line-height:1.8";
       card.appendChild(stat);
       var btn = el("button", "btn gold"); btn.style.cssText = "width:100%;margin-top:12px";
       btn.addEventListener("click", function () {
         if (!canPrestige()) return;
-        confirmModal("Prestige now?", "You'll gain " + fmt(prestigeGain()) + " Necro Cash. Your souls, businesses and assets reset; achievements, coins, store and cards are kept.", doPrestige, "Prestige", "☠️");
+        confirmModal("Prestige now?", "You'll gain " + fmt(prestigeGain()) + " Nekro Cash. Your souls, businesses and assets reset; achievements, coins, store and cards are kept.", doPrestige, "Prestige", "☠️");
       });
       card.appendChild(btn);
       view.appendChild(card);
       updaters.push(function () {
         stat.innerHTML =
-          "Current Necro Cash: <b class='mono'>" + fmt(state.prestigePoints) + "</b><br>" +
+          "Nekro Cash to spend: <b class='mono' style='color:var(--gold)'>" + fmt(state.prestigePoints) + "</b><br>" +
+          "Lifetime Nekro Cash: <b class='mono'>" + fmt(state.nekroLifetime || 0) + "</b><br>" +
           "Current multiplier: <b class='mono'>×" + fmt(prestigeMult()) + "</b><br>" +
-          "Prestige now for: <b class='mono' style='color:var(--gold)'>" + fmt(prestigeGain()) + "</b> Necro Cash<br>" +
-          "New multiplier would be: <b class='mono'>×" + fmt(1 + (state.prestigePoints + prestigeGain()) * 0.03) + "</b>";
+          "Prestige now for: <b class='mono' style='color:var(--gold)'>" + fmt(prestigeGain()) + "</b> Nekro Cash<br>" +
+          "New multiplier would be: <b class='mono'>×" + fmt(1 + ((state.nekroLifetime || 0) + prestigeGain()) * 0.03) + "</b>";
         btn.disabled = !canPrestige();
-        btn.textContent = canPrestige() ? ("☠️ Prestige for " + fmt(prestigeGain()) + " Necro Cash") : "Earn more souls to prestige";
+        btn.textContent = canPrestige() ? ("☠️ Prestige for " + fmt(prestigeGain()) + " Nekro Cash") : "Earn more souls to prestige";
       });
+
+      // Spend Nekro Cash shop
+      view.appendChild(el("div", "section-title", "<span>Spend Nekro Cash</span>"));
+      var list = el("div", "list");
+      NEKRO_UPGRADES.forEach(function (u) {
+        var it = el("button", "item");
+        it.appendChild(el("div", "icon", u.icon));
+        var body = el("div", "body");
+        body.appendChild(el("div", "name", u.name));
+        body.appendChild(el("div", "desc", u.desc));
+        var meta = el("div", "meta"); body.appendChild(meta);
+        it.appendChild(body);
+        var right = el("div", "right"); var cost = el("div", "cost"); right.appendChild(cost); it.appendChild(right);
+        it.addEventListener("click", function () { buyNekro(u); });
+        list.appendChild(it);
+        updaters.push(function () {
+          var lvl = state.nekro[u.key] || 0;
+          meta.textContent = "Level " + lvl;
+          var c = nekroCost(u);
+          cost.textContent = fmt(c) + " ☠️";
+          it.classList.toggle("cant", state.prestigePoints < c);
+        });
+      });
+      view.appendChild(list);
     }
 
     /* ---------- Achievements ---------- */
@@ -1937,14 +2017,18 @@
     document.getElementById("importBtn").addEventListener("click", function () {
       openSavePop("import", "");
     });
-    document.getElementById("hardResetBtn").addEventListener("click", function () {
-      confirmModal("Hard reset everything?", "This wipes all progress, prestige and achievements. This cannot be undone.", function () {
-        localStorage.removeItem(SAVE_KEY);
-        state = freshState();
-        closeSettings();
-        buildTab(currentTab); refresh(); updateAchBadge();
-        toast("Everything reset.");
-      }, "Reset", "⚠️");
+    // Wipe & restart — uses the dancing-skeleton "Are you sure?" popup
+    var wipePop = document.getElementById("wipePop");
+    document.getElementById("wipeBtn").addEventListener("click", function () { wipePop.classList.add("show"); });
+    document.getElementById("wipeNo").addEventListener("click", function () { wipePop.classList.remove("show"); });
+    wipePop.addEventListener("click", function (e) { if (e.target === wipePop) wipePop.classList.remove("show"); });
+    document.getElementById("wipeYes").addEventListener("click", function () {
+      wipePop.classList.remove("show");
+      localStorage.removeItem(SAVE_KEY);
+      state = freshState();
+      closeSettings();
+      buildTab(currentTab); refresh(); updateAchBadge();
+      toast("Game wiped — fresh start!");
     });
 
     /* =========================================================
@@ -1988,13 +2072,13 @@
       });
     });
     document.getElementById("devNecro").addEventListener("click", function () {
-      state.prestigePoints += 100; checkAchievements(); refresh(); save(); toast("+100 Necro Cash");
+      state.prestigePoints += 100; checkAchievements(); refresh(); save(); toast("+100 Nekro Cash");
     });
-    document.getElementById("devEverything").addEventListener("click", function () {
-      BUSINESSES.forEach(function (b) { state.biz[b.id].n += 100; });
-      VEHICLES.concat(REALESTATE).forEach(function (a) { state.assets[a.id] = (state.assets[a.id] || 0) + 100; });
-      checkAchievements(); buildTab(currentTab); refresh(); save();
-      toast("+100 of every business & asset");
+    document.getElementById("devTiers").addEventListener("click", function () {
+      var total = 0;
+      for (var e = 3; e <= 45; e += 3) total += 100 * Math.pow(10, e); // 100 of each tier: K, M, B, T, Qa, ... QaDc
+      addSouls(total); checkAchievements(); refresh(); save();
+      toast("+100 of each money tier");
     });
 
     /* =========================================================
@@ -2008,7 +2092,7 @@
       var secs = Math.min(elapsed / 1000, 60 * 60 * 24); // cap 24h
       var steps = Math.min(60, Math.floor(secs / 60));
       for (var i = 0; i < steps; i++) { stepMarket(); stepStocks(); }
-      var earned = incomePerSec() * secs;
+      var earned = incomePerSec() * secs * (1 + 0.5 * ((state.nekro && state.nekro.offline) || 0)); // Grave Robber
       if (earned > 0) { addSouls(earned); toast("Welcome back — your empire earned " + fmt(earned) + " souls while you were away."); }
     }
 
