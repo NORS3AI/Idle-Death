@@ -438,7 +438,7 @@
     <div class="box">
       <div class="big">☠️</div>
       <h3>Maximum souls reached</h3>
-      <p>You've amassed the maximum of 9e1000000000000000 souls — the ledger of death is full. You must prestige to keep going. Your Nekro Cash and multiplier carry over.</p>
+      <p>You've amassed the maximum of 1e300 souls — the ledger of death is full. You must prestige to keep going. Your Nekro Cash and multiplier carry over.</p>
       <button class="btn gold" id="forcePrestigeBtn" style="width:100%">Prestige now</button>
     </div>
   </div>
@@ -773,7 +773,10 @@
     /* =========================================================
        State
        ========================================================= */
-    var SOUL_CAP = 9e1000000000000000;    // hard souls ceiling; reaching it forces a prestige
+    // Hard souls ceiling; reaching it forces a prestige. Must stay finite and
+    // safely below Number.MAX_VALUE (~1.8e308) so nothing ever overflows to
+    // Infinity (which would cascade into infinite Nekro Cash / multiplier).
+    var SOUL_CAP = 1e300;
     var forcedActive = false;
 
     function freshState() {
@@ -823,11 +826,12 @@
         if (!raw) return;
         var d = JSON.parse(raw);
         var s = freshState();
-        s.souls = +d.souls || 0;
-        s.coins = +d.coins || 0;
-        s.prestigePoints = +d.prestigePoints || 0;
+        // clamp everything to finite + cap so a corrupted (Infinity) save self-heals on load
+        s.souls = Math.min(SOUL_CAP, fin(+d.souls, 0) || 0);
+        s.coins = Math.min(SOUL_CAP, fin(+d.coins, 0) || 0);
+        s.prestigePoints = Math.min(SOUL_CAP, fin(+d.prestigePoints, 0) || 0);
         // old saves: lifetime = current balance (nothing spent yet)
-        s.nekroLifetime = (d.nekroLifetime != null) ? (+d.nekroLifetime || 0) : s.prestigePoints;
+        s.nekroLifetime = Math.min(SOUL_CAP, (d.nekroLifetime != null) ? (fin(+d.nekroLifetime, 0) || 0) : s.prestigePoints);
         if (d.nekro) { s.nekro.void = +d.nekro.void || 0; s.nekro.grip = +d.nekro.grip || 0; s.nekro.offline = +d.nekro.offline || 0; }
         s.perClickBase = +d.perClickBase || 1;
         s.spinLast = +d.spinLast || 0;
@@ -853,9 +857,9 @@
         s.buyAmt = d.buyAmt || 1;
         s.lastSeen = +d.lastSeen || Date.now();
         if (d.boost) s.boost = { mult: +d.boost.mult || 1, until: +d.boost.until || 0 };
-        if (d.stats) ["clicks","spins","jackpots","prestiges","totalEarned"].forEach(function (k) { s.stats[k] = +d.stats[k] || 0; });
+        if (d.stats) ["clicks","spins","jackpots","prestiges","totalEarned"].forEach(function (k) { s.stats[k] = Math.min(SOUL_CAP, fin(+d.stats[k], 0) || 0); });
         // earnings since last prestige; migrate old saves to their lifetime total
-        s.stats.runEarned = (d.stats && d.stats.runEarned != null) ? (+d.stats.runEarned || 0) : (s.stats.totalEarned || 0);
+        s.stats.runEarned = Math.min(SOUL_CAP, (d.stats && d.stats.runEarned != null) ? (fin(+d.stats.runEarned, 0) || 0) : (s.stats.totalEarned || 0));
         BUSINESSES.forEach(function (b) { if (d.biz && d.biz[b.id]) s.biz[b.id] = { n: +d.biz[b.id].n || 0, up: Math.min(10, +d.biz[b.id].up || 0) }; });
         if (d.assets) VEHICLES.concat(REALESTATE).forEach(function (a) { s.assets[a.id] = +d.assets[a.id] || 0; });
         MUSEUM.forEach(function (m) {
@@ -901,7 +905,10 @@
       });
       return (1 + add) * setF;
     }
-    function globalMult() { return prestigeMult() * nekroMult() * achMult() * assetMult() * museumMult() * storeMult() * cardsMult() * boostMult(); }
+    function globalMult() {
+      var m = prestigeMult() * nekroMult() * achMult() * assetMult() * museumMult() * storeMult() * cardsMult() * boostMult();
+      return isFinite(m) ? m : 1e308;   // never let the multiplier become Infinity
+    }
 
     function bizUnitMult(b) { return Math.pow(BIZ_UP_MUL, state.biz[b.id].up); }
     function baseIncomePerSec() {
@@ -916,8 +923,8 @@
       STOCKS.forEach(function (stk) { r += stk.maxEarn * Math.min(1, stockShares(stk.id) / STOCK_OWN_TARGET); });
       return r;
     }
-    function incomePerSec() { return (baseIncomePerSec() + stockIncomePerSec()) * globalMult(); }
-    function perClick() { return state.perClickBase * globalMult() * nekroClickMult(); }
+    function incomePerSec() { return fin((baseIncomePerSec() + stockIncomePerSec()) * globalMult(), SOUL_CAP); }
+    function perClick() { return fin(state.perClickBase * globalMult() * nekroClickMult(), SOUL_CAP); }
 
     function totalBizUnits() { var t = 0; BUSINESSES.forEach(function (b) { t += state.biz[b.id].n; }); return t; }
     function totalMuseumShares() { var t = 0; MUSEUM.forEach(function (m) { t += (state.museum[m.id] || 0); }); return t; }
@@ -945,9 +952,16 @@
     /* =========================================================
        Actions
        ========================================================= */
+    function fin(x, d) { return isFinite(x) ? x : d; }   // guard against Infinity/NaN
     function addSouls(n) {
-      if (n > 0) { state.stats.totalEarned += n; state.stats.runEarned += n; }
-      state.souls += n;
+      if (!(n > 0)) return;                              // ignore non-positive / NaN
+      if (!isFinite(n) || n > SOUL_CAP) n = SOUL_CAP;    // an overflowed income never adds Infinity
+      var room = SOUL_CAP - state.souls;
+      if (room <= 0) { state.souls = SOUL_CAP; triggerForcedPrestige(); return; }
+      var add = n < room ? n : room;                     // never exceed the cap
+      state.souls += add;
+      state.stats.totalEarned = Math.min(SOUL_CAP, state.stats.totalEarned + add);
+      state.stats.runEarned = Math.min(SOUL_CAP, state.stats.runEarned + add);
       if (state.souls >= SOUL_CAP) { state.souls = SOUL_CAP; triggerForcedPrestige(); }
     }
 
@@ -1129,7 +1143,7 @@
     // based on earnings SINCE the last prestige (reset on prestige), so you
     // can't immediately prestige again for the same amount
     // Nekro Cash is now much harder to earn (divisor 1e15 instead of 1e9).
-    function prestigeGain() { return Math.floor(Math.sqrt((state.stats.runEarned || 0) / 1e15)); }
+    function prestigeGain() { return fin(Math.floor(Math.sqrt((state.stats.runEarned || 0) / 1e15)), 0); }
     function canPrestige() { return prestigeGain() >= 1; }
     function doPrestige() {
       var gain = prestigeGain();
@@ -1137,8 +1151,8 @@
       var keepStats = state.stats;
       var keepAch = state.ach;
       var keepCoins = state.coins;
-      var keepPP = state.prestigePoints + gain;
-      var keepLife = (state.nekroLifetime || 0) + gain;   // lifetime drives the passive multiplier
+      var keepPP = Math.min(SOUL_CAP, state.prestigePoints + gain);
+      var keepLife = Math.min(SOUL_CAP, (state.nekroLifetime || 0) + gain);   // lifetime drives the passive multiplier
       var keepNekro = state.nekro;
       var keepAmt = state.buyAmt;
       var keepDev = state.dev;
