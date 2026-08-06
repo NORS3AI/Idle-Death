@@ -185,7 +185,18 @@
     .amtToggle button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 
     /* ---------- Clicker ---------- */
-    .clicker-wrap { display: flex; justify-content: center; margin: 10px 0 6px; }
+    .clicker-wrap { position: relative; display: flex; justify-content: center; margin: 10px 0 6px; }
+    .boost-badge {
+      position: absolute; left: 6px; top: 50%; transform: translateY(-50%);
+      display: none; flex-direction: column; align-items: center; gap: 1px;
+      background: var(--panel2); border: 1px solid var(--accent2); border-radius: 14px;
+      padding: 8px 10px; min-width: 62px; text-align: center; z-index: 2;
+      box-shadow: 0 6px 16px rgba(34,211,238,.25);
+    }
+    .boost-badge.on { display: flex; }
+    .boost-badge .lbl { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+    .boost-badge .m { font-size: 22px; font-weight: 800; color: var(--accent2); line-height: 1; }
+    .boost-badge .t { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
     .clicker {
       -webkit-appearance: none; appearance: none; border: none;
       width: min(360px, 88%); height: 128px; border-radius: 30px;
@@ -299,6 +310,8 @@
     .set-row .btn { flex: 1; }
     .switch { justify-content: space-between; cursor: pointer; }
     input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent); }
+    /* allow selecting/copy-paste inside the save-code box (global rule disables selection) */
+    textarea { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
   </style>
 </head>
 <body>
@@ -382,6 +395,30 @@
       <h3>Maximum souls reached</h3>
       <p>You've amassed the maximum of 9e264 souls — the ledger of death is full. You must prestige to keep going. Your prestige points and multiplier carry over.</p>
       <button class="btn gold" id="forcePrestigeBtn" style="width:100%">Prestige now</button>
+    </div>
+  </div>
+
+  <div class="popup" id="confirmPop">
+    <div class="box">
+      <div class="big" id="confirmIcon">❓</div>
+      <h3 id="confirmTitle">Confirm</h3>
+      <p id="confirmText"></p>
+      <div class="set-row">
+        <button class="btn gold" id="confirmYes" style="flex:1">Confirm</button>
+        <button class="btn ghost" id="confirmNo" style="flex:1">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="popup" id="savePop">
+    <div class="box settings-box">
+      <h3 id="saveTitle">Save code</h3>
+      <p class="hint" id="saveHint" style="margin:0 0 8px"></p>
+      <textarea id="saveText" spellcheck="false" autocomplete="off" style="width:100%;height:110px;resize:none;border-radius:12px;border:1px solid var(--border);background:var(--bg);color:var(--text);padding:10px;font-size:12px;font-family:monospace"></textarea>
+      <div class="set-row" style="margin-top:10px">
+        <button class="btn gold" id="saveAction" style="flex:1">Copy</button>
+        <button class="btn ghost" id="saveCancel" style="flex:1">Close</button>
+      </div>
     </div>
   </div>
 
@@ -498,19 +535,27 @@
 
     // Spin wheel segments (weighted).
     var SPIN_SEGMENTS = [
-      { label: "Bust",             short: "Bust",     color: "#3b3b52", weight: 14, kind: "nothing" },
-      { label: "60s cash",         short: "60s",      color: "#34d399", weight: 20, kind: "income", secs: 60 },
-      { label: "x2 income 60s",    short: "x2",       color: "#22d3ee", weight: 12, kind: "boost", mult: 2, secs: 60 },
-      { label: "5m cash",          short: "5m",       color: "#8b5cf6", weight: 14, kind: "income", secs: 300 },
-      { label: "Free Car",         short: "🚗",       color: "#fbbf24", weight: 9,  kind: "vehicle" },
-      { label: "x3 income 45s",    short: "x3",       color: "#2dd4bf", weight: 8,  kind: "boost", mult: 3, secs: 45 },
-      { label: "+1 reaper coin",   short: "💠",       color: "#f472b6", weight: 7,  kind: "coin" },
-      { label: "10m instant cash", short: "10m",      color: "#38bdf8", weight: 9,  kind: "income", secs: 600 },
-      { label: "30m instant cash", short: "30m",      color: "#818cf8", weight: 6,  kind: "income", secs: 1800 },
-      { label: "60m instant cash", short: "60m",      color: "#c084fc", weight: 4,  kind: "income", secs: 3600 },
-      { label: "Filed for Bankruptcy", short: "Bankrupt", color: "#ef4444", weight: 10, kind: "loss", amount: 50000 },
-      { label: "JACKPOT",          short: "JACKPOT",  color: "#f59e0b", weight: 5,  kind: "income", secs: 7200, jackpot: true }
+      { key: "bust", label: "Bust",             short: "Bust",     color: "#3b3b52", weight: 14, kind: "nothing" },
+      { key: "c60s", label: "60s cash",         short: "60s",      color: "#34d399", weight: 20, kind: "income", secs: 60 },
+      { key: "b2",   label: "x2 income 45s",    short: "x2",       color: "#22d3ee", weight: 12, kind: "boost", mult: 2, secs: 45 },
+      { key: "c5m",  label: "5m cash",          short: "5m",       color: "#8b5cf6", weight: 14, kind: "income", secs: 300 },
+      { key: "car",  label: "Free Car",         short: "🚗",       color: "#fbbf24", weight: 9,  kind: "vehicle" },
+      { key: "b5",   label: "x5 income 45s",    short: "x5",       color: "#2dd4bf", weight: 8,  kind: "boost", mult: 5, secs: 45 },
+      { key: "b10",  label: "x10 income 45s",   short: "x10",      color: "#14b8a6", weight: 5,  kind: "boost", mult: 10, secs: 45 },
+      { key: "b25",  label: "x25 income 45s",   short: "x25",      color: "#06b6d4", weight: 3,  kind: "boost", mult: 25, secs: 45 },
+      { key: "coin", label: "+1 reaper coin",   short: "💠",       color: "#f472b6", weight: 7,  kind: "coin" },
+      { key: "c10m", label: "10m instant cash", short: "10m",      color: "#38bdf8", weight: 9,  kind: "income", secs: 600 },
+      { key: "c30m", label: "30m instant cash", short: "30m",      color: "#818cf8", weight: 6,  kind: "income", secs: 1800 },
+      { key: "c60m", label: "60m instant cash", short: "60m",      color: "#c084fc", weight: 4,  kind: "income", secs: 3600 },
+      { key: "bank", label: "Filed for Bankruptcy", short: "Bankrupt", color: "#ef4444", weight: 10, kind: "loss", amount: 50000 },
+      { key: "jack", label: "JACKPOT",          short: "JACKPOT",  color: "#f59e0b", weight: 5,  kind: "income", secs: 7200, jackpot: true }
     ];
+    var ALL_SEG_KEYS = ["bust","c60s","b2","c5m","car","b5","b10","b25","coin","c10m","c30m","c60m","bank","jack","jack2","c5h"];
+    function shuffled(arr) {
+      var a = arr.slice();
+      for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; }
+      return a;
+    }
     var SPIN_COOLDOWN = 30 * 60 * 1000; // 30 min free spin
 
     // ---- Store: card suits & chests ----
@@ -595,6 +640,7 @@
         freeSpins: 5,          // pool of free wheel spins
         dev: { infiniteSpins: false },
         store: { multLevels: 0, removeBankruptcy: false, secondJackpot: false, fiveHour: false },
+        spinOrder: null,       // randomized order of wheel slices (keys)
         cards: {},             // suitId -> { cardIndex: true }
         buyAmt: 1,             // 1 / 10 / 100 / -1(Max)
         stats: { clicks: 0, spins: 0, jackpots: 0, prestiges: 0, totalEarned: 0 },
@@ -632,6 +678,7 @@
           s.store.secondJackpot = !!d.store.secondJackpot;
           s.store.fiveHour = !!d.store.fiveHour;
         }
+        if (Array.isArray(d.spinOrder)) s.spinOrder = d.spinOrder.slice();
         if (d.cards) SUITS.forEach(function (suit) {
           var src = d.cards[suit.id] || {}, dst = s.cards[suit.id];
           for (var i = 0; i < suit.cards.length; i++) if (src[i]) dst[i] = true;
@@ -855,6 +902,7 @@
       var keepDev = state.dev;
       var keepStore = state.store;   // coin-bought upgrades persist
       var keepCards = state.cards;   // card collection persists
+      var keepOrder = state.spinOrder;
       keepStats.prestiges += 1;
       var fresh = freshState();
       fresh.stats = keepStats;
@@ -865,6 +913,7 @@
       fresh.dev = keepDev;
       fresh.store = keepStore;
       fresh.cards = keepCards;
+      fresh.spinOrder = keepOrder;
       state = fresh;
       showPopup("☠️", "Reborn!", "You gained " + fmt(gain) + " prestige points.\nPermanent multiplier is now ×" + fmt(prestigeMult()) + ".");
       checkAchievements();
@@ -892,9 +941,27 @@
     // Wheel segments after applying store purchases.
     function activeSegments() {
       var segs = SPIN_SEGMENTS.filter(function (s) { return !(state.store.removeBankruptcy && s.kind === "loss"); }).slice();
-      if (state.store.secondJackpot) segs.push({ label: "JACKPOT", short: "JACKPOT", color: "#f97316", weight: 5, kind: "income", secs: 7200, jackpot: true });
-      if (state.store.fiveHour) segs.push({ label: "5H instant cash", short: "5H", color: "#a855f7", weight: 5, kind: "income", secs: 18000 });
-      return segs;
+      if (state.store.secondJackpot) segs.push({ key: "jack2", label: "JACKPOT", short: "JACKPOT", color: "#f97316", weight: 5, kind: "income", secs: 7200, jackpot: true });
+      if (state.store.fiveHour) segs.push({ key: "c5h", label: "5H instant cash", short: "5H", color: "#a855f7", weight: 5, kind: "income", secs: 18000 });
+      return orderSegments(segs);
+    }
+    function initSpinOrder() { state.spinOrder = shuffled(ALL_SEG_KEYS); }
+    // arrange the active segments according to the stored (randomized) order
+    function orderSegments(segs) {
+      if (!state.spinOrder || !state.spinOrder.length) initSpinOrder();
+      var byKey = {};
+      segs.forEach(function (s) { byKey[s.key] = s; });
+      var result = [];
+      state.spinOrder.forEach(function (k) { if (byKey[k]) { result.push(byKey[k]); delete byKey[k]; } });
+      Object.keys(byKey).forEach(function (k) { result.push(byKey[k]); }); // any new keys not yet in order
+      return result;
+    }
+    function buyShuffle() {
+      if (state.coins < 350) return;
+      state.coins -= 350;
+      initSpinOrder();
+      toast("Wheel positions randomized!");
+      afterChange();
     }
     function suitComplete(suit) {
       var o = state.cards[suit.id] || {};
@@ -1045,9 +1112,26 @@
         checkAchievements();
         refresh();
       });
+      // active boost countdown, shown to the LEFT of the tap button
+      var boostBadge = el("div", "boost-badge");
+      boostBadge.appendChild(el("div", "lbl", "Boost"));
+      var bM = el("div", "m"); boostBadge.appendChild(bM);
+      var bT = el("div", "t"); boostBadge.appendChild(bT);
+      wrap.appendChild(boostBadge);
       wrap.appendChild(btn);
       view.appendChild(wrap);
       view.appendChild(el("p", "hint", "Tap the reaper to collect souls. Build businesses so it earns while you're away — this clicker becomes fully idle over time."));
+
+      updaters.push(function () {
+        var rem = state.boost.until - Date.now();
+        if (rem > 0 && state.boost.mult > 1) {
+          boostBadge.classList.add("on");
+          bM.textContent = "×" + state.boost.mult;
+          bT.textContent = Math.ceil(rem / 1000) + "s";
+        } else {
+          boostBadge.classList.remove("on");
+        }
+      });
 
       var card = el("div", "card");
       card.appendChild(el("div", "section-title", "<span>Empire summary</span>"));
@@ -1350,6 +1434,17 @@
           else { cost.textContent = u.cost + " 💠"; it.classList.toggle("cant", state.coins < u.cost); }
         });
       });
+      // repeatable: randomize the positions of every slice on the wheel
+      var shuf = el("button", "item");
+      shuf.appendChild(el("div", "icon", "🔀"));
+      var shBody = el("div", "body");
+      shBody.appendChild(el("div", "name", "Randomize Wheel Positions"));
+      shBody.appendChild(el("div", "desc", "Shuffle every slice into new positions on the wheel."));
+      shuf.appendChild(shBody);
+      var shRight = el("div", "right"); var shCost = el("div", "cost"); shRight.appendChild(shCost); shuf.appendChild(shRight);
+      shuf.addEventListener("click", buyShuffle);
+      slist.appendChild(shuf);
+      updaters.push(function () { shCost.textContent = "350 💠"; shuf.classList.toggle("cant", state.coins < 350); });
       view.appendChild(slist);
 
       // chests
@@ -1426,7 +1521,7 @@
       var btn = el("button", "btn gold"); btn.style.cssText = "width:100%;margin-top:12px";
       btn.addEventListener("click", function () {
         if (!canPrestige()) return;
-        if (confirm("Prestige now for " + fmt(prestigeGain()) + " points? Your souls, businesses and assets will reset.")) doPrestige();
+        confirmModal("Prestige now?", "You'll gain " + fmt(prestigeGain()) + " prestige points. Your souls, businesses and assets reset; achievements, coins, store and cards are kept.", doPrestige, "Prestige", "☠️");
       });
       card.appendChild(btn);
       view.appendChild(card);
@@ -1514,6 +1609,66 @@
     document.getElementById("popOk").addEventListener("click", nextPopup);
     popup.addEventListener("click", function (e) { if (e.target === popup) nextPopup(); });
 
+    // In-game confirm dialog (replaces window.confirm)
+    var confirmPop = document.getElementById("confirmPop");
+    var pendingConfirm = null;
+    function confirmModal(title, text, onYes, yesLabel, icon) {
+      document.getElementById("confirmIcon").textContent = icon || "❓";
+      document.getElementById("confirmTitle").textContent = title;
+      document.getElementById("confirmText").textContent = text;
+      document.getElementById("confirmYes").textContent = yesLabel || "Confirm";
+      pendingConfirm = onYes;
+      confirmPop.classList.add("show");
+    }
+    function closeConfirm() { confirmPop.classList.remove("show"); pendingConfirm = null; }
+    document.getElementById("confirmYes").addEventListener("click", function () {
+      var fn = pendingConfirm; closeConfirm(); if (fn) fn();
+    });
+    document.getElementById("confirmNo").addEventListener("click", closeConfirm);
+    confirmPop.addEventListener("click", function (e) { if (e.target === confirmPop) closeConfirm(); });
+
+    // In-game save-code dialog (replaces window.prompt for export/import)
+    var savePop = document.getElementById("savePop");
+    var saveTextEl = document.getElementById("saveText");
+    var saveMode = "export";
+    function openSavePop(mode, code) {
+      saveMode = mode;
+      document.getElementById("saveTitle").textContent = mode === "export" ? "Export save" : "Import save";
+      document.getElementById("saveHint").textContent = mode === "export"
+        ? "Copy this code and keep it somewhere safe."
+        : "Paste a save code below, then press Load.";
+      document.getElementById("saveAction").textContent = mode === "export" ? "Copy" : "Load";
+      saveTextEl.value = code || "";
+      saveTextEl.readOnly = (mode === "export");
+      savePop.classList.add("show");
+      if (mode === "export") { try { saveTextEl.focus(); saveTextEl.select(); } catch (e) {} }
+    }
+    function closeSavePop() { savePop.classList.remove("show"); }
+    document.getElementById("saveCancel").addEventListener("click", closeSavePop);
+    savePop.addEventListener("click", function (e) { if (e.target === savePop) closeSavePop(); });
+    document.getElementById("saveAction").addEventListener("click", function () {
+      if (saveMode === "export") {
+        var txt = saveTextEl.value;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(txt).then(function () { toast("Copied to clipboard."); }, function () { toast("Select the code and copy it."); });
+        } else {
+          try { saveTextEl.select(); document.execCommand("copy"); toast("Copied to clipboard."); }
+          catch (e) { toast("Select the code and copy it."); }
+        }
+      } else {
+        var code = (saveTextEl.value || "").trim();
+        if (!code) return;
+        try {
+          var json = decodeURIComponent(escape(atob(code)));
+          JSON.parse(json);
+          localStorage.setItem(SAVE_KEY, json);
+          load(); buildTab(currentTab); refresh(); updateAchBadge();
+          closeSavePop();
+          toast("Save imported.");
+        } catch (e) { toast("Invalid save code."); }
+      }
+    });
+
     /* =========================================================
        Save controls
        ========================================================= */
@@ -1521,26 +1676,19 @@
     document.getElementById("exportBtn").addEventListener("click", function () {
       save();
       var code = btoa(unescape(encodeURIComponent(localStorage.getItem(SAVE_KEY) || "")));
-      prompt("Copy your save code:", code);
+      openSavePop("export", code);
     });
     document.getElementById("importBtn").addEventListener("click", function () {
-      var code = prompt("Paste a save code:");
-      if (!code) return;
-      try {
-        var json = decodeURIComponent(escape(atob(code.trim())));
-        JSON.parse(json);
-        localStorage.setItem(SAVE_KEY, json);
-        load(); buildTab(currentTab); refresh(); updateAchBadge();
-        toast("Save imported.");
-      } catch (e) { toast("Invalid save code."); }
+      openSavePop("import", "");
     });
     document.getElementById("hardResetBtn").addEventListener("click", function () {
-      if (!confirm("Hard reset EVERYTHING? This wipes all progress, prestige and achievements.")) return;
-      localStorage.removeItem(SAVE_KEY);
-      state = freshState();
-      closeSettings();
-      buildTab(currentTab); refresh(); updateAchBadge();
-      toast("Everything reset.");
+      confirmModal("Hard reset everything?", "This wipes all progress, prestige and achievements. This cannot be undone.", function () {
+        localStorage.removeItem(SAVE_KEY);
+        state = freshState();
+        closeSettings();
+        buildTab(currentTab); refresh(); updateAchBadge();
+        toast("Everything reset.");
+      }, "Reset", "⚠️");
     });
 
     /* =========================================================
