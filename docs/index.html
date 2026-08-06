@@ -357,9 +357,11 @@
 
         <div class="set-row"><span class="lbl">Add souls</span></div>
         <div class="set-row">
-          <button class="btn ghost" data-souls="100">+100</button>
           <button class="btn ghost" data-souls="1000">+1K</button>
-          <button class="btn ghost" data-souls="10000">+10K</button>
+          <button class="btn ghost" data-souls="100000">+100K</button>
+          <button class="btn ghost" data-souls="100000000">+100M</button>
+          <button class="btn ghost" data-souls="100000000000">+100B</button>
+          <button class="btn ghost" data-souls="100000000000000">+100T</button>
         </div>
 
         <div class="set-row"><span class="lbl">Add reaper coins 💠</span></div>
@@ -371,6 +373,15 @@
       </div>
 
       <button class="btn gold" id="settingsClose" style="width:100%;margin-top:16px">Close</button>
+    </div>
+  </div>
+
+  <div class="popup" id="forcePop">
+    <div class="box">
+      <div class="big">☠️</div>
+      <h3>Maximum souls reached</h3>
+      <p>You've amassed the maximum of 9e264 souls — the ledger of death is full. You must prestige to keep going. Your prestige points and multiplier carry over.</p>
+      <button class="btn gold" id="forcePrestigeBtn" style="width:100%">Prestige now</button>
     </div>
   </div>
 
@@ -533,6 +544,9 @@
     /* =========================================================
        State
        ========================================================= */
+    var SOUL_CAP = 9e264;    // hard souls ceiling; reaching it forces a prestige
+    var forcedActive = false;
+
     function freshState() {
       var s = {
         souls: 0,
@@ -649,7 +663,11 @@
     /* =========================================================
        Actions
        ========================================================= */
-    function addSouls(n) { state.souls += n; if (n > 0) state.stats.totalEarned += n; }
+    function addSouls(n) {
+      if (n > 0) state.stats.totalEarned += n;
+      state.souls += n;
+      if (state.souls >= SOUL_CAP) { state.souls = SOUL_CAP; triggerForcedPrestige(); }
+    }
 
     function buyBusiness(b) {
       var k = buyQty(b.baseCost, b.costMul, state.biz[b.id].n);
@@ -760,6 +778,13 @@
     /* =========================================================
        Prestige
        ========================================================= */
+    function triggerForcedPrestige() {
+      if (forcedActive) return;
+      forcedActive = true;
+      var fp = document.getElementById("forcePop");
+      if (fp) fp.classList.add("show");
+    }
+
     function prestigeGain() { return Math.floor(Math.sqrt(state.stats.totalEarned / 1e9)); }
     function canPrestige() { return prestigeGain() >= 1; }
     function doPrestige() {
@@ -1282,6 +1307,12 @@
     if (openSettingsBtn) openSettingsBtn.addEventListener("click", openSettings);
     document.getElementById("settingsClose").addEventListener("click", closeSettings);
     settingsEl.addEventListener("click", function (e) { if (e.target === settingsEl) closeSettings(); });
+
+    document.getElementById("forcePrestigeBtn").addEventListener("click", function () {
+      document.getElementById("forcePop").classList.remove("show");
+      forcedActive = false;
+      doPrestige();
+    });
 
     document.getElementById("devInfSpins").addEventListener("change", function (e) {
       state.dev.infiniteSpins = e.target.checked;
