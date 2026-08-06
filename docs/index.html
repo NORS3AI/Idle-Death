@@ -301,7 +301,14 @@
     var lastTouchEnd = 0;
     document.addEventListener("touchend", function (e) {
       var now = Date.now();
-      if (now - lastTouchEnd <= 350) e.preventDefault();
+      // Prevent iOS double-tap-to-zoom — but NEVER on interactive controls.
+      // Calling preventDefault() on touchend cancels the follow-up "click",
+      // which would make rapid tapping on buy/upgrade buttons do nothing.
+      if (now - lastTouchEnd <= 350) {
+        var interactive = e.target && e.target.closest &&
+          e.target.closest("button, a, .item, input, textarea, select, label");
+        if (!interactive) e.preventDefault();
+      }
       lastTouchEnd = now;
     }, { passive: false });
     ["gesturestart", "gesturechange", "gestureend"].forEach(function (t) {
