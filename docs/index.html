@@ -414,6 +414,16 @@
       var scaled = n / Math.pow(1000, tier);
       return (Math.round(scaled * 100) / 100) + UNITS[tier];
     }
+    // Like fmt() but for the exact per-tap gain: rounds (never floors) small
+    // amounts to 2 decimals, and uses K/M/B/... suffixes at/above 1000.
+    function fmtGain(n) {
+      if (!isFinite(n)) return "∞";
+      if (n < 1000) {
+        var r = Math.round(n * 100) / 100;
+        return (r % 1 === 0) ? r.toFixed(0) : String(r);
+      }
+      return fmt(n);
+    }
     function fmtTime(ms) {
       var s = Math.max(0, Math.floor(ms / 1000));
       var m = Math.floor(s / 60); s = s % 60;
@@ -865,8 +875,9 @@
       var btn = el("button", "clicker"); btn.textContent = "☠️"; btn.setAttribute("aria-label", "Reap souls");
       btn.addEventListener("pointerdown", function (e) {
         e.preventDefault();
-        addSouls(perClick());
-        floaty("+" + fmt(perClick()), e.clientX, e.clientY);
+        var gain = perClick();
+        addSouls(gain);
+        floaty("+" + fmtGain(gain), e.clientX, e.clientY);
         state.stats.clicks++;
         checkAchievements();
         refresh();
