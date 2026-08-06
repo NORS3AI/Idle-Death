@@ -513,6 +513,38 @@
     ];
     var SPIN_COOLDOWN = 30 * 60 * 1000; // 30 min free spin
 
+    // ---- Store: card suits & chests ----
+    var ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"];
+    var CARDS_PER_SUIT = 6;
+    var SUIT_DEFS = [
+      { id: "undead",      name: "Undead",      icon: "🧟", color: "#84cc16", cardBase: 0.03, setMult: 1.5 },
+      { id: "vampire",     name: "Vampire",     icon: "🧛", color: "#ef4444", cardBase: 0.05, setMult: 2 },
+      { id: "witch",       name: "Witch",       icon: "🧙", color: "#22c55e", cardBase: 0.08, setMult: 3 },
+      { id: "void",        name: "Void",        icon: "🌌", color: "#6366f1", cardBase: 0.12, setMult: 5 },
+      { id: "psy",         name: "Psy",         icon: "🔮", color: "#ec4899", cardBase: 0.18, setMult: 8 },
+      { id: "necromancer", name: "Necromancer", icon: "💀", color: "#f59e0b", cardBase: 0.35, setMult: 20 }
+    ];
+    // Each suit gets CARDS_PER_SUIT cards, each with its own income bonus.
+    var SUITS = SUIT_DEFS.map(function (s) {
+      var cards = [];
+      for (var i = 0; i < CARDS_PER_SUIT; i++) {
+        cards.push({ name: s.name + " " + ROMAN[i], bonus: Math.round(s.cardBase * (1 + 0.15 * i) * 1000) / 1000 });
+      }
+      return { id: s.id, name: s.name, icon: s.icon, color: s.color, setMult: s.setMult, cards: cards };
+    });
+    var SUIT_WEIGHTS = { undead: 40, vampire: 25, witch: 18, void: 10, psy: 6 }; // necromancer is a fixed 1% roll
+    var NECRO_CHANCE = 0.01;
+    var CHESTS = [
+      { id: "bone",  name: "Bone Chest",  icon: "🎁", cost: 10, cards: 1 },
+      { id: "crypt", name: "Crypt Chest", icon: "⚰️", cost: 45, cards: 5 }
+    ];
+    // one-time coin store upgrades that modify the spin wheel
+    var STORE_SPIN = [
+      { id: "removeBankruptcy", name: "Close the Bankruptcy Court", icon: "🚫", desc: "Remove the 'Filed for Bankruptcy' slice from the wheel forever.", cost: 50 },
+      { id: "secondJackpot",    name: "Second Jackpot",             icon: "💥", desc: "Add a second JACKPOT slice to the wheel.", cost: 100 },
+      { id: "fiveHour",         name: "5H Cash Slice",              icon: "🕔", desc: "Add a 5-hour (5H) instant-cash slice to the wheel.", cost: 500 }
+    ];
+
     // Achievements. reward: {mult:x} adds to a global achievement multiplier; {coins:n} grants prestige coins.
     var ACHIEVEMENTS = [
       { id: "firstclick", icon: "👆", name: "First Reaping",      desc: "Tap the reaper once.",              reward: { mult: 0.02 }, test: function (s) { return s.stats.clicks >= 1; } },
@@ -562,12 +594,15 @@
         spinLast: 0,
         freeSpins: 5,          // pool of free wheel spins
         dev: { infiniteSpins: false },
+        store: { multLevels: 0, removeBankruptcy: false, secondJackpot: false, fiveHour: false },
+        cards: {},             // suitId -> { cardIndex: true }
         buyAmt: 1,             // 1 / 10 / 100 / -1(Max)
         stats: { clicks: 0, spins: 0, jackpots: 0, prestiges: 0, totalEarned: 0 },
         lastSeen: Date.now()
       };
       BUSINESSES.forEach(function (b) { s.biz[b.id] = { n: 0, up: 0 }; });
       MUSEUM.forEach(function (m) { s.market[m.id] = m.base; s.museum[m.id] = 0; });
+      SUITS.forEach(function (suit) { s.cards[suit.id] = {}; });
       return s;
     }
     var state = freshState();
@@ -591,6 +626,16 @@
         s.spinLast = +d.spinLast || 0;
         s.freeSpins = (d.freeSpins == null) ? 5 : (+d.freeSpins || 0); // grant 5 to existing saves
         if (d.dev) s.dev.infiniteSpins = !!d.dev.infiniteSpins;
+        if (d.store) {
+          s.store.multLevels = +d.store.multLevels || 0;
+          s.store.removeBankruptcy = !!d.store.removeBankruptcy;
+          s.store.secondJackpot = !!d.store.secondJackpot;
+          s.store.fiveHour = !!d.store.fiveHour;
+        }
+        if (d.cards) SUITS.forEach(function (suit) {
+          var src = d.cards[suit.id] || {}, dst = s.cards[suit.id];
+          for (var i = 0; i < suit.cards.length; i++) if (src[i]) dst[i] = true;
+        });
         s.buyAmt = d.buyAmt || 1;
         s.lastSeen = +d.lastSeen || Date.now();
         if (d.boost) s.boost = { mult: +d.boost.mult || 1, until: +d.boost.until || 0 };
@@ -626,7 +671,18 @@
     }
     function prestigeMult() { return 1 + state.prestigePoints * 0.03; }
     function boostMult() { return (state.boost.until > Date.now()) ? state.boost.mult : 1; }
-    function globalMult() { return prestigeMult() * achMult() * assetMult() * museumMult() * boostMult(); }
+    function storeMult() { return 1 + (state.store.multLevels || 0) * 0.5; }
+    function cardsMult() {
+      var add = 0, setF = 1;
+      SUITS.forEach(function (suit) {
+        var owned = state.cards[suit.id] || {};
+        var cnt = 0;
+        for (var i = 0; i < suit.cards.length; i++) { if (owned[i]) { add += suit.cards[i].bonus; cnt++; } }
+        if (cnt >= suit.cards.length) setF *= suit.setMult; // completed suite bonus
+      });
+      return (1 + add) * setF;
+    }
+    function globalMult() { return prestigeMult() * achMult() * assetMult() * museumMult() * storeMult() * cardsMult() * boostMult(); }
 
     function bizUnitMult(b) { return Math.pow(BIZ_UP_MUL, state.biz[b.id].up); }
     function baseIncomePerSec() {
@@ -733,10 +789,11 @@
     /* =========================================================
        Spin wheel
        ========================================================= */
+    var spinSegs = SPIN_SEGMENTS.slice(); // current wheel (rebuilt from store in buildSpin)
     function pickSegment() {
-      var total = 0; SPIN_SEGMENTS.forEach(function (s) { total += s.weight; });
+      var total = 0; spinSegs.forEach(function (s) { total += s.weight; });
       var r = Math.random() * total, acc = 0;
-      for (var i = 0; i < SPIN_SEGMENTS.length; i++) { acc += SPIN_SEGMENTS[i].weight; if (r <= acc) return i; }
+      for (var i = 0; i < spinSegs.length; i++) { acc += spinSegs[i].weight; if (r <= acc) return i; }
       return 0;
     }
     var spinning = false;
@@ -796,6 +853,8 @@
       var keepPP = state.prestigePoints + gain;
       var keepAmt = state.buyAmt;
       var keepDev = state.dev;
+      var keepStore = state.store;   // coin-bought upgrades persist
+      var keepCards = state.cards;   // card collection persists
       keepStats.prestiges += 1;
       var fresh = freshState();
       fresh.stats = keepStats;
@@ -804,10 +863,86 @@
       fresh.prestigePoints = keepPP;
       fresh.buyAmt = keepAmt;
       fresh.dev = keepDev;
+      fresh.store = keepStore;
+      fresh.cards = keepCards;
       state = fresh;
       showPopup("☠️", "Reborn!", "You gained " + fmt(gain) + " prestige points.\nPermanent multiplier is now ×" + fmt(prestigeMult()) + ".");
       checkAchievements();
       buildTab(currentTab); refresh(); save();
+    }
+
+    /* =========================================================
+       Store: coin upgrades, spin mods, chests & cards
+       ========================================================= */
+    function storeMultCost() { return Math.ceil(15 * Math.pow(1.8, state.store.multLevels || 0)); }
+    function buyStoreMult() {
+      var c = storeMultCost();
+      if (state.coins < c) return;
+      state.coins -= c;
+      state.store.multLevels = (state.store.multLevels || 0) + 1;
+      afterChange();
+    }
+    function buySpinUpgrade(u) {
+      if (state.store[u.id] || state.coins < u.cost) return;
+      state.coins -= u.cost;
+      state.store[u.id] = true;
+      toast(u.name + " purchased!");
+      afterChange();
+    }
+    // Wheel segments after applying store purchases.
+    function activeSegments() {
+      var segs = SPIN_SEGMENTS.filter(function (s) { return !(state.store.removeBankruptcy && s.kind === "loss"); }).slice();
+      if (state.store.secondJackpot) segs.push({ label: "JACKPOT", short: "JACKPOT", color: "#f97316", weight: 5, kind: "income", secs: 7200, jackpot: true });
+      if (state.store.fiveHour) segs.push({ label: "5H instant cash", short: "5H", color: "#a855f7", weight: 5, kind: "income", secs: 18000 });
+      return segs;
+    }
+    function suitComplete(suit) {
+      var o = state.cards[suit.id] || {};
+      for (var i = 0; i < suit.cards.length; i++) if (!o[i]) return false;
+      return true;
+    }
+    function completeSuitIds() { return SUITS.filter(suitComplete).map(function (s) { return s.id; }); }
+    function drawCard() {
+      var suit;
+      if (Math.random() < NECRO_CHANCE) {
+        suit = SUITS[SUITS.length - 1]; // necromancer (1%)
+      } else {
+        var pool = SUITS.filter(function (s) { return s.id !== "necromancer"; });
+        var total = 0; pool.forEach(function (s) { total += (SUIT_WEIGHTS[s.id] || 1); });
+        var r = Math.random() * total, acc = 0;
+        suit = pool[pool.length - 1];
+        for (var i = 0; i < pool.length; i++) { acc += (SUIT_WEIGHTS[pool[i].id] || 1); if (r <= acc) { suit = pool[i]; break; } }
+      }
+      var idx = Math.floor(Math.random() * suit.cards.length);
+      var owned = state.cards[suit.id] || (state.cards[suit.id] = {});
+      var isNew = !owned[idx];
+      var refund = 0;
+      if (isNew) owned[idx] = true; else { refund = 2; state.coins += refund; }
+      return { suit: suit, idx: idx, card: suit.cards[idx], isNew: isNew, refund: refund };
+    }
+    function buyChest(chest) {
+      if (state.coins < chest.cost) return;
+      state.coins -= chest.cost;
+      var before = completeSuitIds();
+      var drops = [];
+      for (var i = 0; i < chest.cards; i++) drops.push(drawCard());
+      var after = completeSuitIds();
+      var newly = after.filter(function (id) { return before.indexOf(id) < 0; });
+      checkAchievements(); refresh(); save();
+      showChestResult(chest, drops, newly);
+    }
+    function showChestResult(chest, drops, newly) {
+      var lines = drops.map(function (d) {
+        var tag = d.isNew ? "NEW" : "dupe +" + d.refund + "c";
+        return d.suit.icon + " " + d.card.name + " (+" + Math.round(d.card.bonus * 100) + "%) — " + tag;
+      });
+      var necro = drops.some(function (d) { return d.suit.id === "necromancer" && d.isNew; });
+      var body = lines.join("\n");
+      newly.forEach(function (id) {
+        var s = SUITS.filter(function (x) { return x.id === id; })[0];
+        body += "\n\n★ SUITE COMPLETE: " + s.name + " — ×" + s.setMult + " income!";
+      });
+      showPopup(necro ? "💀" : "🎴", necro ? "NECROMANCER CARD!" : (chest.name + " opened"), body, "Sweet");
     }
 
     /* =========================================================
@@ -837,6 +972,7 @@
       { id: "estate",  ic: "🏰", label: "Estate" },
       { id: "market",  ic: "📈", label: "Museum" },
       { id: "spin",    ic: "🎡", label: "Spin" },
+      { id: "store",   ic: "🛒", label: "Store" },
       { id: "prestige",ic: "☠️", label: "Prestige" },
       { id: "ach",     ic: "🏆", label: "Awards" }
     ];
@@ -891,6 +1027,7 @@
       else if (id === "estate") buildEstate();
       else if (id === "market") buildMarket();
       else if (id === "spin") buildSpin();
+      else if (id === "store") buildStore();
       else if (id === "prestige") buildPrestige();
       else if (id === "ach") buildAch();
     }
@@ -1089,11 +1226,12 @@
       var wrap = el("div", "wheel-wrap");
       wrap.appendChild(el("div", "wheel-ptr"));
       wheelEl = el("div", "wheel");
-      var seg = 360 / SPIN_SEGMENTS.length;
+      spinSegs = activeSegments();               // rebuild wheel from store purchases
+      var seg = 360 / spinSegs.length;
       var stops = [];
-      SPIN_SEGMENTS.forEach(function (s, i) { stops.push(s.color + " " + (i * seg) + "deg " + ((i + 1) * seg) + "deg"); });
+      spinSegs.forEach(function (s, i) { stops.push(s.color + " " + (i * seg) + "deg " + ((i + 1) * seg) + "deg"); });
       wheelEl.style.background = "conic-gradient(" + stops.join(",") + ")";
-      SPIN_SEGMENTS.forEach(function (s, i) {
+      spinSegs.forEach(function (s, i) {
         var lab = el("div", "seg", "<span>" + (s.short || s.label) + "</span>");
         // rotate the label to the center angle of its segment; keep text near the rim
         lab.style.transform = "rotate(" + (i * seg + seg / 2) + "deg)";
@@ -1148,7 +1286,7 @@
       }
       spinning = true;
       var idx = pickSegment();
-      var seg = 360 / SPIN_SEGMENTS.length;
+      var seg = 360 / spinSegs.length;
       var turns = 5;
       var target = turns * 360 + (360 - (idx * seg + seg / 2)) + (Math.random() * seg * 0.6 - seg * 0.3);
       wheelEl.style.transition = "transform 4.2s cubic-bezier(.17,.67,.16,.99)";
@@ -1159,8 +1297,120 @@
         wheelEl.style.transition = "none";
         wheelEl.style.transform = "rotate(" + final + "deg)";
         spinning = false;
-        applySpinReward(SPIN_SEGMENTS[idx]);
+        applySpinReward(spinSegs[idx]);
       }, 4300);
+    }
+
+    /* ---------- Store ---------- */
+    function buildStore() {
+      view.appendChild(el("div", "section-title", "<span>Reaper Coin Store</span>"));
+
+      // coin balance
+      var balCard = el("div", "card"); balCard.style.textAlign = "center";
+      var kEl = el("div"); kEl.style.cssText = "font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px"; kEl.textContent = "Reaper coins";
+      var vEl = el("div", "mono"); vEl.style.cssText = "font-size:26px;font-weight:800;color:var(--gold)";
+      balCard.appendChild(kEl); balCard.appendChild(vEl);
+      view.appendChild(balCard);
+      updaters.push(function () { vEl.textContent = fmt(state.coins) + " 💠"; });
+
+      // permanent multiplier (repeatable)
+      view.appendChild(el("div", "section-title", "<span>Permanent Upgrade</span>"));
+      var multItem = el("button", "item");
+      multItem.appendChild(el("div", "icon", "✳️"));
+      var mBody = el("div", "body");
+      mBody.appendChild(el("div", "name", "Death Blessing"));
+      mBody.appendChild(el("div", "desc", "+50% global income per level (permanent, survives prestige)."));
+      var mMeta = el("div", "meta"); mBody.appendChild(mMeta);
+      multItem.appendChild(mBody);
+      var mRight = el("div", "right"); var mCost = el("div", "cost"); mRight.appendChild(mCost); multItem.appendChild(mRight);
+      multItem.addEventListener("click", buyStoreMult);
+      view.appendChild(multItem);
+      updaters.push(function () {
+        mMeta.textContent = "Level " + (state.store.multLevels || 0) + " · now ×" + fmt(storeMult());
+        var c = storeMultCost();
+        mCost.textContent = fmt(c) + " 💠";
+        multItem.classList.toggle("cant", state.coins < c);
+      });
+
+      // spin wheel upgrades
+      view.appendChild(el("div", "section-title", "<span>Spin Wheel Upgrades</span>"));
+      var slist = el("div", "list");
+      STORE_SPIN.forEach(function (u) {
+        var it = el("button", "item");
+        it.appendChild(el("div", "icon", u.icon));
+        var body = el("div", "body");
+        body.appendChild(el("div", "name", u.name));
+        body.appendChild(el("div", "desc", u.desc));
+        it.appendChild(body);
+        var right = el("div", "right"); var cost = el("div", "cost"); right.appendChild(cost); it.appendChild(right);
+        it.addEventListener("click", function () { buySpinUpgrade(u); });
+        slist.appendChild(it);
+        updaters.push(function () {
+          if (state.store[u.id]) { cost.textContent = "OWNED ✓"; cost.style.color = "var(--accent2)"; it.disabled = true; it.classList.remove("cant"); }
+          else { cost.textContent = u.cost + " 💠"; it.classList.toggle("cant", state.coins < u.cost); }
+        });
+      });
+      view.appendChild(slist);
+
+      // chests
+      view.appendChild(el("div", "section-title", "<span>Card Chests</span>"));
+      view.appendChild(el("p", "hint", "Open chests for cards across six dead-themed suites. Each card grants its own income bonus; collect all 6 of a suite for a huge multiplier. Necromancer cards have a 1% drop chance per card."));
+      var clist = el("div", "list");
+      CHESTS.forEach(function (ch) {
+        var it = el("button", "item");
+        it.appendChild(el("div", "icon", ch.icon));
+        var body = el("div", "body");
+        body.appendChild(el("div", "name", ch.name));
+        body.appendChild(el("div", "desc", ch.cards + (ch.cards > 1 ? " cards" : " card") + " per open · 1% Necromancer chance"));
+        it.appendChild(body);
+        var right = el("div", "right"); var cost = el("div", "cost"); right.appendChild(cost); it.appendChild(right);
+        it.addEventListener("click", function () { buyChest(ch); });
+        clist.appendChild(it);
+        updaters.push(function () { cost.textContent = ch.cost + " 💠"; it.classList.toggle("cant", state.coins < ch.cost); });
+      });
+      view.appendChild(clist);
+
+      // collection
+      view.appendChild(el("div", "section-title", "<span>Card Collection · 6 Suites</span>"));
+      var col = el("div", "list");
+      SUITS.forEach(function (suit) {
+        var card = el("div", "card"); card.style.borderColor = suit.color;
+        var head = el("div"); head.style.cssText = "display:flex;align-items:center;gap:10px";
+        var ic = el("div", null, suit.icon); ic.style.fontSize = "26px"; head.appendChild(ic);
+        var hb = el("div"); hb.style.flex = "1";
+        hb.appendChild(el("div", "name", suit.name + " Suite"));
+        var prog = el("div", "meta"); hb.appendChild(prog);
+        head.appendChild(hb);
+        card.appendChild(head);
+        var grid = el("div"); grid.style.cssText = "display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px";
+        var cellEls = [];
+        suit.cards.forEach(function (c, i) {
+          var cell = el("div"); cell.style.cssText = "border:1px solid var(--border);border-radius:8px;padding:6px;text-align:center;font-size:11px";
+          var nm = el("div"); nm.style.fontWeight = "700";
+          var bo = el("div"); bo.style.color = "var(--muted)";
+          cell.appendChild(nm); cell.appendChild(bo);
+          grid.appendChild(cell);
+          cellEls.push({ cell: cell, nm: nm, bo: bo, i: i, c: c });
+        });
+        card.appendChild(grid);
+        col.appendChild(card);
+        updaters.push(function () {
+          var owned = state.cards[suit.id] || {};
+          var cnt = 0;
+          cellEls.forEach(function (ce) {
+            var have = !!owned[ce.i];
+            if (have) cnt++;
+            ce.nm.textContent = have ? ce.c.name : "🔒";
+            ce.bo.textContent = have ? ("+" + Math.round(ce.c.bonus * 100) + "%") : "???";
+            ce.cell.style.opacity = have ? "1" : "0.5";
+            ce.cell.style.background = have ? "rgba(255,255,255,0.03)" : "transparent";
+          });
+          var done = cnt >= suit.cards.length;
+          prog.textContent = cnt + "/" + suit.cards.length + " · set ×" + suit.setMult + (done ? " COMPLETE" : "");
+          prog.style.color = done ? "var(--gold)" : "var(--muted)";
+        });
+      });
+      view.appendChild(col);
     }
 
     /* ---------- Prestige ---------- */
