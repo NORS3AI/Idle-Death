@@ -209,15 +209,16 @@
     .boost-badge .m { font-size: 22px; font-weight: 800; color: var(--accent2); line-height: 1; }
     .boost-badge .t { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
     .clicker {
-      -webkit-appearance: none; appearance: none; border: none;
-      width: min(360px, 88%); height: 128px; border-radius: 30px;
-      font-size: 62px; cursor: pointer; color: #fff;
-      background: radial-gradient(120% 160% at 50% 30%, #2b2b45, #14141f 72%);
-      box-shadow: 0 0 0 3px var(--border), 0 12px 30px rgba(139,92,246,.35);
-      transition: transform .06s, box-shadow .2s;
-      display: flex; align-items: center; justify-content: center; touch-action: manipulation;
+      -webkit-appearance: none; appearance: none; border: none; padding: 0;
+      width: min(400px, 94%); aspect-ratio: 2172 / 724; height: auto;
+      border-radius: 16px; cursor: pointer; color: transparent; font-size: 0;
+      background: #000 center / 100% 100% no-repeat;
+      background-image: url("tap-button.webp");
+      box-shadow: 0 10px 26px rgba(139,92,246,.35);
+      transition: transform .06s, filter .12s;
+      display: block; touch-action: manipulation;
     }
-    .clicker:active { transform: scale(0.97); box-shadow: 0 0 0 3px var(--accent), 0 6px 18px rgba(139,92,246,.5); }
+    .clicker:active { transform: scale(0.97); filter: brightness(1.18); }
     .hint { text-align: center; color: var(--muted); font-size: 12px; margin: 4px 0 8px; line-height: 1.5; }
 
     .floaty {
@@ -1399,7 +1400,7 @@
     /* ---------- Tap tab ---------- */
     function buildTap() {
       var wrap = el("div", "clicker-wrap");
-      var btn = el("button", "clicker"); btn.textContent = "☠️"; btn.setAttribute("aria-label", "Reap souls");
+      var btn = el("button", "clicker"); btn.setAttribute("aria-label", "Reap souls");
       btn.addEventListener("pointerdown", function (e) {
         e.preventDefault();
         var gain = perClick();
