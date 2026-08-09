@@ -83,8 +83,8 @@
     /* ---------- Header ---------- */
     header { text-align: center; padding: 8px 40px 2px; flex: 0 0 auto; }
     .logo {
-      height: clamp(104px, 20vw, 148px); width: auto; max-width: 92%;
-      display: block; margin: 0 auto; border-radius: 12px;
+      height: clamp(104px, 20vw, 152px); width: auto; max-width: 92%;
+      display: block; margin: 0 auto;
       -webkit-user-drag: none; user-select: none; pointer-events: none;
     }
     .tagline { margin: 3px 0 0; font-size: 12px; color: var(--muted); }
@@ -210,15 +210,14 @@
     .boost-badge .t { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
     .clicker {
       -webkit-appearance: none; appearance: none; border: none; padding: 0;
-      width: min(400px, 94%); aspect-ratio: 2172 / 724; height: auto;
-      border-radius: 16px; cursor: pointer; color: transparent; font-size: 0;
-      background: #000 center / 100% 100% no-repeat;
+      width: min(410px, 94%); aspect-ratio: 1254 / 545; height: auto;
+      cursor: pointer; color: transparent; font-size: 0;
+      background: transparent center / 100% 100% no-repeat;
       background-image: url("tap-button.webp");
-      box-shadow: 0 10px 26px rgba(139,92,246,.35);
       transition: transform .06s, filter .12s;
       display: block; touch-action: manipulation;
     }
-    .clicker:active { transform: scale(0.97); filter: brightness(1.18); }
+    .clicker:active { transform: scale(0.96); filter: brightness(1.2); }
     .hint { text-align: center; color: var(--muted); font-size: 12px; margin: 4px 0 8px; line-height: 1.5; }
 
     .floaty {
@@ -363,7 +362,7 @@
 <body>
   <div class="app">
     <header>
-      <img class="logo" src="logo.webp" width="512" height="512" alt="Idle Death" />
+      <img class="logo" src="logo.webp" width="512" height="477" alt="Idle Death" />
     </header>
 
     <div class="hud">
