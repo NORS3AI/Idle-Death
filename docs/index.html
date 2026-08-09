@@ -734,7 +734,7 @@
       { key: "c10m", label: "10m instant cash", short: "10m",      color: "#38bdf8", weight: 9,  kind: "income", secs: 600 },
       { key: "c30m", label: "30m instant cash", short: "30m",      color: "#818cf8", weight: 6,  kind: "income", secs: 1800 },
       { key: "c60m", label: "60m instant cash", short: "60m",      color: "#c084fc", weight: 4,  kind: "income", secs: 3600 },
-      { key: "bank", label: "Filed for Bankruptcy", short: "Bankrupt", color: "#ef4444", weight: 10, kind: "loss", amount: 50000 },
+      { key: "bank", label: "Filed for Bankruptcy", short: "Bankrupt", color: "#ef4444", weight: 10, kind: "loss", pct: 0.25 },
       { key: "jack", label: "JACKPOT",          short: "JACKPOT",  color: "#f59e0b", weight: 5,  kind: "income", secs: 7200, jackpot: true }
     ];
     var ALL_SEG_KEYS = ["bust","c60s","b2","c5m","car","b5","b10","b25","coin","c10m","c30m","c60m","bank","jack","jack2","c5h"];
@@ -1081,26 +1081,19 @@
     /* =========================================================
        Market simulation (museum items as stocks)
        ========================================================= */
-    function stepMarket() {
-      MUSEUM.forEach(function (m) {
-        var p = state.market[m.id];
-        var shock = (Math.random() - 0.5) * 2 * m.vol; // +/- vol
-        p = p * (1 + m.drift + shock);
-        var floor = m.base * 0.35;
-        if (p < floor) p = floor;
-        state.market[m.id] = p;
-      });
+    // Mean-reverting random walk around `base` so the price genuinely swings
+    // both above AND below the (hidden) base value.
+    function walk(p, base, vol) {
+      p = p + (base - p) * 0.06 + p * (Math.random() - 0.5) * 2 * vol;
+      if (p < base * 0.3) p = base * 0.3;
+      if (p > base * 3) p = base * 3;
+      return p;
     }
-    // Stocks fluctuate up and down (no upward drift) every STOCK_TICK ms.
+    function stepMarket() {
+      MUSEUM.forEach(function (m) { state.market[m.id] = walk(state.market[m.id] || m.base, m.base, m.vol); });
+    }
     function stepStocks() {
-      STOCKS.forEach(function (stk) {
-        var p = state.stockPrice[stk.id] || stk.base;
-        var shock = (Math.random() - 0.5) * 2 * stk.vol;
-        p = p * (1 + shock);
-        if (p < stk.base * 0.25) p = stk.base * 0.25;
-        if (p > stk.base * 4) p = stk.base * 4;
-        state.stockPrice[stk.id] = p;
-      });
+      STOCKS.forEach(function (stk) { state.stockPrice[stk.id] = walk(state.stockPrice[stk.id] || stk.base, stk.base, stk.vol); });
     }
     function buyStock(stk, qty) {
       var price = state.stockPrice[stk.id] || stk.base;
@@ -1134,10 +1127,10 @@
         else msg = "+" + fmt(amt) + " souls (" + fmtTime(seg.secs * 1000) + " of income)";
       }
       else if (seg.kind === "loss") {
-        var take = Math.min(seg.amount, state.souls);
+        var take = state.souls * (seg.pct || 0.25);   // lose a % of current souls
         state.souls -= take;
         icon = "💸";
-        msg = "Filed for bankruptcy — lost " + fmt(take) + " souls.";
+        msg = "Filed for bankruptcy — lost " + fmt(take) + " souls (" + Math.round((seg.pct || 0.25) * 100) + "%).";
       }
       else if (seg.kind === "boost") {
         state.boost = { mult: seg.mult, until: Date.now() + seg.secs * 1000 };
@@ -1633,7 +1626,6 @@
         btns.appendChild(mk("Max", function () { buyStock(stk, -1); }));
         card.appendChild(btns);
         list.appendChild(card);
-        var last = state.stockPrice[stk.id] || stk.base;
         updaters.push(function () {
           var p = state.stockPrice[stk.id] || stk.base;
           var sh = stockShares(stk.id);
@@ -1642,10 +1634,10 @@
           hold.textContent = (owned ? "OWNED · " : "") + "Shares: " + fmt(sh) + " / 1M";
           hold.style.color = owned ? "var(--gold)" : "var(--muted)";
           barIn.style.width = Math.min(100, sh / STOCK_OWN_TARGET * 100) + "%";
-          var up = p >= last;
-          tEl.textContent = (up ? "▲ " : "▼ ") + fmt(p);
-          tEl.style.color = up ? "var(--good)" : "var(--bad)";
-          last = p;
+          // above the (hidden) base = ▲ yellow; below = ▼ green
+          var above = p >= stk.base;
+          tEl.textContent = (above ? "▲ " : "▼ ") + fmt(p);
+          tEl.style.color = above ? "var(--gold)" : "var(--good)";
         });
       });
       view.appendChild(list);
@@ -1679,16 +1671,15 @@
         card.appendChild(btns);
         list.appendChild(card);
 
-        var lastPrice = state.market[m.id];
         updaters.push(function () {
           var p = state.market[m.id];
           price.textContent = "Price: " + fmt(p) + " 💀 · +" + Math.round(m.mult * 100) + "%/share";
           var held = state.museum[m.id] || 0;
           hold.textContent = "Held: " + held + " · value " + fmt(held * p);
-          var up = p >= lastPrice;
-          tEl.textContent = (up ? "▲ " : "▼ ") + fmt(p);
-          tEl.style.color = up ? "var(--good)" : "var(--bad)";
-          lastPrice = p;
+          // above the (hidden) base = ▲ yellow; below = ▼ green
+          var above = p >= m.base;
+          tEl.textContent = (above ? "▲ " : "▼ ") + fmt(p);
+          tEl.style.color = above ? "var(--gold)" : "var(--good)";
         });
       });
       view.appendChild(list);
