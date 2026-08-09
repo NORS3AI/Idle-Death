@@ -88,6 +88,8 @@
       -webkit-user-drag: none; user-select: none; pointer-events: none;
     }
     .tagline { margin: 3px 0 0; font-size: 12px; color: var(--muted); }
+    .hdr-divider { height: 24px; margin: 2px auto 0; max-width: 360px;
+      background: url("divider.webp") center / contain no-repeat; }
 
     .hud {
       flex: 0 0 auto;
@@ -353,7 +355,13 @@
     .set-row .lbl { font-size: 13px; flex: 1; min-width: 90px; color: var(--text); }
     .set-row .btn { flex: 1; }
     .switch { justify-content: space-between; cursor: pointer; }
-    input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent); }
+    input[type="checkbox"] {
+      -webkit-appearance: none; appearance: none; margin: 0; border: none; cursor: pointer;
+      width: 32px; height: 32px; flex: 0 0 auto;
+      background: url("check-off.webp") center / contain no-repeat;
+      touch-action: manipulation;
+    }
+    input[type="checkbox"]:checked { background-image: url("check-on.webp"); }
     input[type="range"] { width: 100%; accent-color: var(--accent); height: 24px; }
     /* allow selecting/copy-paste inside the save-code box (global rule disables selection) */
     textarea { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
@@ -363,6 +371,7 @@
   <div class="app">
     <header>
       <img class="logo" src="logo.webp" width="512" height="477" alt="Idle Death" />
+      <div class="hdr-divider" aria-hidden="true"></div>
     </header>
 
     <div class="hud">
