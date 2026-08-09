@@ -1606,6 +1606,12 @@
     function buildStocks() {
       view.appendChild(el("div", "section-title", "<span>Stock Exchange · 50 tickers</span>"));
       view.appendChild(el("p", "hint", "Prices swing up and down every 7 seconds. Buy shares — once you hold 1,000,000 shares you OWN the company and earn its full income. Partial holdings earn a proportional share."));
+      var totalCard = el("div", "card"); totalCard.style.textAlign = "center";
+      var totV = el("div", "mono"); totV.style.cssText = "font-size:18px;font-weight:800;color:var(--good)";
+      var totK = el("div"); totK.style.cssText = "font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px"; totK.textContent = "Total stock income (included in your souls/sec)";
+      totalCard.appendChild(totK); totalCard.appendChild(totV);
+      view.appendChild(totalCard);
+      updaters.push(function () { totV.textContent = "+" + fmt(stockIncomePerSec() * globalMult()) + " / sec"; });
       var list = el("div", "list");
       STOCKS.forEach(function (stk) {
         var card = el("div", "card");
