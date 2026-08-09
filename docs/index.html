@@ -7,6 +7,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#0b0b12" />
+  <link rel="icon" type="image/webp" href="logo.webp" />
+  <link rel="apple-touch-icon" href="logo.webp" />
   <!-- Force dark mode for the page and all native UI (scrollbars, form fields, dialogs) -->
   <meta name="color-scheme" content="dark" />
   <meta name="supported-color-schemes" content="dark" />
@@ -79,12 +81,11 @@
     }
 
     /* ---------- Header ---------- */
-    header { text-align: center; padding: 10px 40px 4px; flex: 0 0 auto; }
-    h1 {
-      margin: 0; font-size: 24px; letter-spacing: 1px;
-      background: linear-gradient(90deg, var(--accent), var(--accent2));
-      -webkit-background-clip: text; background-clip: text;
-      -webkit-text-fill-color: transparent;
+    header { text-align: center; padding: 8px 40px 2px; flex: 0 0 auto; }
+    .logo {
+      height: clamp(104px, 20vw, 148px); width: auto; max-width: 92%;
+      display: block; margin: 0 auto; border-radius: 12px;
+      -webkit-user-drag: none; user-select: none; pointer-events: none;
     }
     .tagline { margin: 3px 0 0; font-size: 12px; color: var(--muted); }
 
@@ -347,7 +348,7 @@
 <body>
   <div class="app">
     <header>
-      <h1>💀 Idle Death</h1>
+      <img class="logo" src="logo.webp" width="512" height="512" alt="Idle Death" />
     </header>
 
     <div class="hud">
