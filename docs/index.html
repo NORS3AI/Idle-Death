@@ -1133,8 +1133,16 @@
         msg = "Filed for bankruptcy — lost " + fmt(take) + " souls (" + Math.round((seg.pct || 0.25) * 100) + "%).";
       }
       else if (seg.kind === "boost") {
-        state.boost = { mult: seg.mult, until: Date.now() + seg.secs * 1000 };
-        msg = "×" + seg.mult + " income for " + seg.secs + "s!";
+        var now = Date.now();
+        if (state.boost.until > now && state.boost.mult > 1) {
+          // boost already active: extend the timer by another 45s, keep the strongest multiplier
+          state.boost.until += seg.secs * 1000;
+          state.boost.mult = Math.max(state.boost.mult, seg.mult);
+          msg = "×" + state.boost.mult + " income · +" + seg.secs + "s (" + fmtTime(state.boost.until - now) + " left)!";
+        } else {
+          state.boost = { mult: seg.mult, until: now + seg.secs * 1000 };
+          msg = "×" + seg.mult + " income for " + seg.secs + "s!";
+        }
       }
       else if (seg.kind === "coin") { state.coins += 1; msg = "+1 reaper coin 💠"; }
       else if (seg.kind === "vehicle") {
@@ -2271,7 +2279,10 @@
     setInterval(save, 10000);
     setInterval(checkAchievements, 1500);
     window.addEventListener("beforeunload", save);
-    document.addEventListener("visibilitychange", function () { if (document.hidden) save(); else { applyOffline(); refresh(); } });
+    document.addEventListener("visibilitychange", function () {
+      if (document.hidden) { state.boost = { mult: 1, until: 0 }; save(); } // leaving the tab cancels the boost
+      else { applyOffline(); refresh(); }
+    });
   })();
   </script>
 </body>
