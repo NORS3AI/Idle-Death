@@ -228,6 +228,20 @@
     }
     @keyframes rise { from { opacity: 1; transform: translate(-50%,0) scale(1);} to { opacity: 0; transform: translate(-50%,-70px) scale(1.3);} }
 
+    /* wispy smoke puffs on tap */
+    .smoke {
+      position: absolute; width: 54px; height: 54px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(196,181,253,.55), rgba(139,92,246,.30) 45%, rgba(139,92,246,0) 70%);
+      filter: blur(7px); pointer-events: none; z-index: 3;
+      transform: translate(-50%, -50%) scale(.4);
+      animation: wisp 1000ms ease-out forwards;
+    }
+    @keyframes wisp {
+      0%   { opacity: 0; transform: translate(-50%, -50%) scale(.35) rotate(0deg); }
+      25%  { opacity: .75; }
+      100% { opacity: 0; transform: translate(calc(-50% + var(--dx, 0px)), calc(-50% + var(--dy, -70px))) scale(1.9) rotate(var(--rot, 20deg)); }
+    }
+
     /* ---------- Business upgrades ---------- */
     .upgrades { display: flex; gap: 4px; flex-wrap: wrap; }
     .dot { width: 14px; height: 14px; border-radius: 4px; background: var(--panel2); border: 1px solid var(--border); }
@@ -379,6 +393,14 @@
   <div class="popup" id="settings">
     <div class="box settings-box">
       <h3>⚙️ Settings</h3>
+
+      <div class="set-sec">
+        <div class="h">Options</div>
+        <label class="set-row switch">
+          <span class="lbl">Wispy smoke on tap</span>
+          <input type="checkbox" id="optSmoke" />
+        </label>
+      </div>
 
       <div class="set-sec">
         <div class="h">Save data</div>
@@ -804,6 +826,7 @@
         spinLast: 0,
         freeSpins: 5,          // pool of free wheel spins
         dev: { infiniteSpins: false },
+        smoke: true,           // wispy smoke on tap (player toggle)
         store: { multLevels: 0, removeBankruptcy: false, secondJackpot: false, fiveHour: false, secondSpinner: false },
         spinOrder: null,       // randomized order of wheel slices (keys)
         spinOrder2: null,      // order for the second wheel
@@ -845,6 +868,7 @@
         s.spinLast = +d.spinLast || 0;
         s.freeSpins = (d.freeSpins == null) ? 5 : (+d.freeSpins || 0); // grant 5 to existing saves
         if (d.dev) s.dev.infiniteSpins = !!d.dev.infiniteSpins;
+        s.smoke = (d.smoke != null) ? !!d.smoke : true;
         if (d.store) {
           s.store.multLevels = +d.store.multLevels || 0;
           s.store.removeBankruptcy = !!d.store.removeBankruptcy;
@@ -1164,6 +1188,7 @@
       var keepNekro = state.nekro;
       var keepAmt = state.buyAmt;
       var keepDev = state.dev;
+      var keepSmoke = state.smoke;
       var keepStore = state.store;   // coin-bought upgrades persist
       var keepCards = state.cards;   // card collection persists
       var keepOrder = state.spinOrder;
@@ -1179,6 +1204,7 @@
       fresh.nekro = keepNekro;
       fresh.buyAmt = keepAmt;
       fresh.dev = keepDev;
+      fresh.smoke = keepSmoke;
       fresh.store = keepStore;
       fresh.cards = keepCards;
       fresh.spinOrder = keepOrder;
@@ -1406,6 +1432,7 @@
         var gain = perClick();
         addSouls(gain);
         floaty("+" + fmtGain(gain), e.clientX, e.clientY);
+        spawnSmoke(wrap, e.clientX, e.clientY);
         state.stats.clicks++;
         checkAchievements();
         refresh();
@@ -2000,6 +2027,22 @@
       document.body.appendChild(f);
       setTimeout(function () { f.remove(); }, 900);
     }
+    // wispy smoke puffs rising from the tap point (x,y in viewport coords)
+    function spawnSmoke(wrap, x, y) {
+      if (!state.smoke) return;
+      var r = wrap.getBoundingClientRect();
+      var bx = x - r.left, by = y - r.top;
+      for (var i = 0; i < 5; i++) {
+        var s = el("div", "smoke");
+        s.style.left = (bx + (Math.random() * 46 - 23)) + "px";
+        s.style.top = (by + (Math.random() * 24 - 12)) + "px";
+        s.style.setProperty("--dx", (Math.random() * 70 - 35) + "px");
+        s.style.setProperty("--dy", (-70 - Math.random() * 70) + "px");
+        s.style.setProperty("--rot", (Math.random() * 80 - 40) + "deg");
+        wrap.appendChild(s);
+        (function (el2) { setTimeout(function () { el2.remove(); }, 1050); })(s);
+      }
+    }
 
     /* ---------- Toast + popup ---------- */
     var toastEl = document.getElementById("toast"), toastTimer = null;
@@ -2121,8 +2164,14 @@
     var settingsEl = document.getElementById("settings");
     function openSettings() {
       document.getElementById("devInfSpins").checked = !!state.dev.infiniteSpins;
+      document.getElementById("optSmoke").checked = !!state.smoke;
       settingsEl.classList.add("show");
     }
+    document.getElementById("optSmoke").addEventListener("change", function (e) {
+      state.smoke = e.target.checked;
+      toast(e.target.checked ? "Wispy smoke on" : "Wispy smoke off");
+      save();
+    });
     function closeSettings() { settingsEl.classList.remove("show"); }
     document.getElementById("gearBtn").addEventListener("click", openSettings);
     var openSettingsBtn = document.getElementById("openSettingsBtn");
